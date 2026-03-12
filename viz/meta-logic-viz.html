@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>三层体系元逻辑说明书 v2 · 可视化</title>
+<style>
+:root{
+  --bg:#0f0f13;--card:#16161d;--card2:#1e1e28;--border:#2a2a36;
+  --text:#e2e0dd;--muted:#7a7a8a;--muted2:#555568;
+  --T:#5b8fcf;--T-dim:rgba(91,143,207,.15);--T-border:rgba(91,143,207,.4);
+  --PA:#9472c4;--PA-dim:rgba(148,114,196,.15);--PA-border:rgba(148,114,196,.4);
+  --G:#5fa86a;--G-dim:rgba(95,168,106,.15);--G-border:rgba(95,168,106,.4);
+  --G8:#c4943a;--G8-dim:rgba(196,148,58,.15);
+  --G7:#c4637a;--G7-dim:rgba(196,99,122,.15);
+  --Gm:#7a7a8a;--Gm-dim:rgba(122,122,138,.15);
+  --accent:#7ca8ff;--danger:#e05c5c;--warn:#d4a843;--ok:#5fa86a;
+  --r:6px;--r2:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans SC',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;font-size:14px;line-height:1.6}
+a{color:var(--accent)}
+
+/* NAV */
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--border);background:var(--card);flex-wrap:wrap}
+.topbar h1{font-size:1rem;font-weight:700;white-space:nowrap;flex-shrink:0}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;flex:1}
+.tab-btn{padding:6px 12px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:5px;cursor:pointer;font-size:.82rem;transition:.15s}
+.tab-btn:hover{background:var(--card2);color:var(--text)}
+.tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* LAYOUT */
+.main{display:flex;flex:1;overflow:hidden;height:calc(100vh - 50px)}
+.panel{display:none;flex:1;overflow:auto;padding:18px}
+.panel.active{display:block}
+
+/* DETAIL SIDE */
+.side{width:360px;min-width:300px;border-left:1px solid var(--border);background:var(--card);overflow:auto;display:flex;flex-direction:column;transition:.2s}
+.side.hidden{width:0;min-width:0;overflow:hidden}
+.side-inner{padding:18px;flex:1}
+.side-close{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.side-close button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem}
+
+/* CARDS */
+.card{background:var(--card2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;margin-bottom:12px}
+.card h3{font-size:.92rem;margin-bottom:8px;font-weight:600}
+.section-title{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:16px 0 8px}
+.tag{display:inline-block;padding:2px 7px;border-radius:3px;font-size:.75rem;font-weight:600;margin-right:4px;margin-bottom:2px}
+.tag-T{background:var(--T-dim);color:var(--T);border:1px solid var(--T-border)}
+.tag-PA{background:var(--PA-dim);color:var(--PA);border:1px solid var(--PA-border)}
+.tag-G{background:var(--G-dim);color:var(--G);border:1px solid var(--G-border)}
+.tag-warn{background:rgba(212,168,67,.15);color:var(--warn);border:1px solid rgba(212,168,67,.3)}
+.badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:.75rem;font-weight:700}
+.badge-main{background:var(--accent);color:#fff}
+.badge-sec{background:var(--card2);border:1px solid var(--border);color:var(--muted)}
+
+/* SVG nodes */
+.node{cursor:pointer}
+.node:hover rect,.node:hover circle{filter:brightness(1.25)}
+.node text{pointer-events:none;font-family:inherit}
+
+/* MATRIX */
+.matrix-wrap{overflow:auto}
+table.matrix{border-collapse:collapse;font-size:.8rem}
+table.matrix th{padding:6px 10px;background:var(--card2);border:1px solid var(--border);white-space:nowrap;text-align:center}
+table.matrix th.row-head{text-align:left;min-width:110px}
+table.matrix td{padding:6px 10px;border:1px solid var(--border);text-align:center;cursor:pointer;transition:.1s}
+table.matrix td:hover{background:var(--card2)}
+.cell-main{color:var(--accent);font-size:1.1rem}
+.cell-sec{color:var(--muted);font-size:1rem}
+.cell-eng{color:var(--warn);font-size:1rem}
+.cell-none{color:var(--muted2)}
+
+/* PA GROUPS */
+.pa-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:20px}
+.pa-group-card{border-radius:var(--r2);border:1px solid var(--border);overflow:hidden}
+.pa-group-header{padding:8px 14px;font-size:.85rem;font-weight:700}
+.pa-group-body{padding:10px 14px}
+.pa-item{padding:6px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;cursor:pointer}
+.pa-item:last-child{border-bottom:none}
+.pa-item:hover{color:var(--accent)}
+.pa-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* COMPLEMENT PAIRS */
+.pairs{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;margin-bottom:20px}
+.pair-card{background:var(--card2);border:1px solid var(--border);border-radius:var(--r2);padding:14px}
+.pair-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.pair-arrow{color:var(--muted);font-size:1.2rem;flex-shrink:0}
+.pair-node{flex:1;background:var(--PA-dim);border:1px solid var(--PA-border);border-radius:5px;padding:6px 10px;cursor:pointer;font-size:.82rem}
+.pair-node:hover{background:rgba(148,114,196,.25)}
+.pair-desc{font-size:.8rem;color:var(--muted);line-height:1.5}
+
+/* CHAIN */
+.chain{display:flex;flex-direction:column;align-items:flex-start;gap:0;margin-bottom:20px}
+.chain-node{background:var(--card2);border:1px solid var(--border);border-radius:var(--r);padding:10px 16px;cursor:pointer;width:100%;max-width:560px;transition:.15s}
+.chain-node:hover{border-color:var(--accent);color:var(--accent)}
+.chain-node .q{font-size:.78rem;color:var(--muted);margin-top:2px}
+.chain-arrow{color:var(--muted);padding:4px 0 4px 16px;font-size:1rem}
+.chain-parallel{display:flex;gap:12px;width:100%;max-width:560px}
+.chain-parallel .chain-node{flex:1}
+
+/* TOOLS */
+.tool-steps{counter-reset:step}
+.tool-step{display:flex;gap:14px;margin-bottom:14px;padding:14px;background:var(--card2);border-radius:var(--r);border:1px solid var(--border)}
+.tool-step-num{width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-size:.9rem}
+.tool-step-body{flex:1}
+.tool-step-body h4{font-weight:600;margin-bottom:4px}
+.tool-step-body p{color:var(--muted);font-size:.82rem}
+.q6-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.q6-card{background:var(--card2);border:1px solid var(--border);border-radius:var(--r);padding:12px}
+.q6-card .qnum{font-size:1.4rem;font-weight:700;color:var(--accent);margin-bottom:4px}
+.q6-card h4{font-size:.85rem;font-weight:600;margin-bottom:4px}
+.q6-card p{font-size:.78rem;color:var(--muted)}
+
+/* DETAIL PANEL CONTENT */
+.detail-id{font-size:1.5rem;font-weight:800;margin-bottom:2px}
+.detail-label{font-size:.9rem;color:var(--muted);margin-bottom:10px}
+.detail-question{background:var(--card2);border-left:3px solid var(--accent);padding:8px 12px;border-radius:0 5px 5px 0;margin-bottom:12px;font-style:italic;font-size:.88rem}
+.detail-section{margin-bottom:12px}
+.detail-section h4{font-size:.78rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:5px}
+.detail-section p{font-size:.84rem;line-height:1.6}
+.math-box{background:#11111a;border:1px solid var(--border);border-radius:5px;padding:10px 12px;font-family:monospace;font-size:.8rem;white-space:pre;overflow:auto;color:#c3d7f0;margin-bottom:8px}
+.case-box{background:rgba(224,92,92,.07);border:1px solid rgba(224,92,92,.3);border-radius:5px;padding:10px 12px;font-size:.82rem;color:var(--text);margin-bottom:8px}
+.analogy-table{width:100%;font-size:.8rem;border-collapse:collapse}
+.analogy-table td{padding:5px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.analogy-table td:first-child{color:var(--muted);white-space:nowrap;padding-right:12px}
+
+/* SERVICE MATRIX */
+.sm-legend{display:flex;gap:12px;font-size:.78rem;margin-bottom:10px;flex-wrap:wrap}
+.sm-legend span{display:flex;align-items:center;gap:4px}
+
+/* ANALOGY TABLE */
+.big-analogy{width:100%;border-collapse:collapse;font-size:.8rem}
+.big-analogy th{padding:8px;background:var(--card2);border:1px solid var(--border);text-align:left}
+.big-analogy td{padding:8px;border:1px solid var(--border);vertical-align:top;line-height:1.5}
+.big-analogy tr:hover td{background:var(--card2)}
+
+/* PANORAMA SVG */
+#pano-svg{width:100%;cursor:grab}
+#pano-svg.grabbing{cursor:grabbing}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .side{width:100%;min-width:0;border-left:none;border-top:1px solid var(--border);max-height:50vh}
+  .main{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>三层体系元逻辑说明书 v2 · 可视化</h1>
+  <nav class="tabs" id="tabs">
+    <button class="tab-btn active" data-view="panorama">全景图</button>
+    <button class="tab-btn" data-view="t-layer">T 层深度</button>
+    <button class="tab-btn" data-view="pa-layer">PA 层深度</button>
+    <button class="tab-btn" data-view="g-layer">G 层结构</button>
+    <button class="tab-btn" data-view="derivation">推导链</button>
+    <button class="tab-btn" data-view="analogy">跨域类比</button>
+    <button class="tab-btn" data-view="tools">实用工具</button>
+  </nav>
+</div>
+
+<div class="main" id="main-area">
+
+<!-- ===== 全景图 ===== -->
+<div class="panel active" id="view-panorama">
+  <div style="margin-bottom:10px;font-size:.82rem;color:var(--muted)">点击任意节点查看详情。全景图展示 T→PA→G 三层及层间连线。</div>
+  <svg id="pano-svg" viewBox="0 0 1100 640" style="max-height:85vh;display:block"></svg>
+</div>
+
+<!-- ===== T 层深度 ===== -->
+<div class="panel" id="view-t-layer">
+  <div class="section-title">T 层 · 本质目标层（5 个）</div>
+  <div style="margin-bottom:12px;font-size:.83rem;color:var(--muted)">适用于：任何多智能体系统 · 违反 = 不再是这类系统，而非"跑得不好" · 点击节点查看详情</div>
+  <div class="card" style="margin-bottom:16px">
+    <div style="font-size:.82rem;color:var(--muted);margin-bottom:8px">T 层内在依赖关系（串行链 + T5 并行约束）</div>
+    <div class="chain" id="t-chain"></div>
+    <div style="font-size:.8rem;color:var(--muted);margin-top:8px;border-top:1px solid var(--border);padding-top:8px">
+      <b>T3 与 T4 的关键区别</b>：T3 = 系统活着（不死）；T4 = 活得有意义（不空转）。满足 T3 但违反 T4 的典型例子：系统在无进展的义务循环中机械来回。
+    </div>
+  </div>
+  <div class="section-title">各目标详细对比</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px" id="t-cards"></div>
+</div>
+
+<!-- ===== PA 层深度 ===== -->
+<div class="panel" id="view-pa-layer">
+  <div class="section-title">PA 层 · 抽象公理层（9 条）</div>
+  <div style="margin-bottom:12px;font-size:.83rem;color:var(--muted)">桥梁层：从 T 推导，比 T 更具体（有结构含义），比 G 更抽象（与实现无关）· 点击节点查看数学表达与违反案例</div>
+  
+  <div class="section-title">功能分组</div>
+  <div class="pa-groups" id="pa-groups"></div>
+
+  <div class="section-title">四对互补关系</div>
+  <div class="pairs" id="pa-pairs"></div>
+
+  <div class="section-title">PA→T 服务矩阵</div>
+  <div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">● = 缺失则该 T 直接失效（主要服务）&nbsp;&nbsp;○ = 缺失对该 T 有影响（次要服务）&nbsp;&nbsp;空 = 无直接关系</div>
+  <div class="matrix-wrap" id="pa-t-matrix"></div>
+</div>
+
+<!-- ===== G 层结构 ===== -->
+<div class="panel" id="view-g-layer">
+  <div class="section-title">G 层 · 当前系统目标层</div>
+  <div style="margin-bottom:12px;font-size:.83rem;color:var(--muted)">与 world/agents/meta 粒子架构绑定 · 每个 G 目标回答一个核心问题 · 点击节点查看详情</div>
+  
+  <div class="card" style="margin-bottom:16px">
+    <div style="font-size:.82rem;color:var(--muted);margin-bottom:10px">G 层依赖链（前者是后者的前置依赖）</div>
+    <div id="g-chain"></div>
+  </div>
+
+  <div class="section-title">G 层完整依赖矩阵</div>
+  <div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">● = 强前置依赖（行依赖列）&nbsp;&nbsp;○ = 弱依赖&nbsp;&nbsp;↑ = 工程增强（G8 增强 G0–G7 但不是前置）</div>
+  <div class="matrix-wrap" id="g-matrix"></div>
+
+  <div style="margin-top:16px" class="section-title">各目标回答什么问题</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px" id="g-cards"></div>
+</div>
+
+<!-- ===== 推导链 ===== -->
+<div class="panel" id="view-derivation">
+  <div class="section-title">T→PA→G 完整推导链</div>
+  <div style="margin-bottom:12px;font-size:.83rem;color:var(--muted)">点击下方任意 T 目标，查看该目标的完整推导通路（T→PA→G）以及对应的具体要求示例</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="deriv-t-buttons"></div>
+  <div id="deriv-content" style="max-width:900px"></div>
+</div>
+
+<!-- ===== 跨域类比 ===== -->
+<div class="panel" id="view-analogy">
+  <div class="section-title">跨域类比总表</div>
+  <div style="margin-bottom:12px;font-size:.83rem;color:var(--muted)">同一个体系的概念，在物理、计算机、芯片三个领域的类比</div>
+  
+  <div class="section-title" style="margin-top:0">三层体系的层级类比</div>
+  <div class="matrix-wrap" style="margin-bottom:20px">
+    <table class="big-analogy" id="layer-analogy"></table>
+  </div>
+  
+  <div class="section-title">PA 公理的跨域类比</div>
+  <div class="matrix-wrap" style="margin-bottom:20px">
+    <table class="big-analogy" id="pa-analogy"></table>
+  </div>
+
+  <div class="section-title">核心概念跨层含义对照</div>
+  <div class="matrix-wrap">
+    <table class="big-analogy" id="concept-analogy"></table>
+  </div>
+</div>
+
+<!-- ===== 实用工具 ===== -->
+<div class="panel" id="view-tools">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div>
+      <div class="section-title" style="margin-top:0">4 步新需求审查指南</div>
+      <div class="tool-steps" id="tool-steps"></div>
+    </div>
+    <div>
+      <div class="section-title" style="margin-top:0">六问沙盘框架（单步演化前置检查）</div>
+      <div class="q6-grid" id="q6-grid"></div>
+    </div>
+  </div>
+  <div class="section-title">三层体系的六项核心价值</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px" id="values-grid"></div>
+</div>
+
+</div><!-- /main -->
+
+<!-- SIDE DETAIL PANEL -->
+<div class="side hidden" id="side-panel">
+  <div class="side-close">
+    <span id="side-layer-tag"></span>
+    <button onclick="closeSide()">✕</button>
+  </div>
+  <div class="side-inner" id="side-content"></div>
+</div>
+
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const D = {
+T: [
+  {id:'T1',label:'T1 可定义性',short:'系统能不能被描述出来？',
+   def:'系统必须能被形式化描述，至少能表达：(1) 可区分的主体与环境；(2) 可描述的状态；(3) 可描述的演化；(4) 可描述的相互作用。',
+   why:'如果连系统有什么、状态是什么、如何演化都无法表达，"运行"、"正确性"、"稳定性"这些概念都失去着落。',
+   consequence:'不会得到"一个运行得差的系统"，而是根本没有系统。',
+   case:'某系统用自然语言描述："A 负责写代码，B 负责审查"。没有定义 agent 是什么、状态是什么、消息如何路由。当推演"A 通知 B"时，无法回答通知从哪来、经过什么路径、B 何时收到、B 状态如何变化——整个推演从起点就失去基础。',
+   analogy:{physics:'必须首先定义相空间（状态）+ 演化算子',comp:'必须首先定义进程（主体）、内存（环境）、系统调用（接口）、调度器（演化）',chip:'必须首先定义寄存器（状态）、ISA（演化规则）、总线（相互作用）'},
+   deps:[],paServed:['PA1','PA5']},
+  {id:'T2',label:'T2 合法性',short:'系统能不能始终保持在有意义的状态？',
+   def:'系统在任意时刻都必须处于合法状态域中。包含五个维度：状态值域合法、写边界合法、时间单调、真源唯一、接口完备。三维写合法性：值域（结果合法）+ 写权唯一（主体唯一）+ 写边界（影响范围有界）。',
+   why:'即使系统在运行，若状态自相矛盾，后续所有演化结果都不可信。T2 失效不是"跑得慢"，而是"跑出来的结果无意义"。',
+   consequence:'系统进入非法状态，后续演化结果不可信。',
+   case:'Agent B 直接将 A 的 energy 从 20 设为 150（超出 [0,100] 合法域）。此后所有依赖 A 的 energy 的判断（是否需要休息、输出带宽、P0 触发）都建立在非法值之上，产生完全不可预期的行为。',
+   analogy:{physics:'守恒律（守恒律定义了合法状态域）',comp:'内存安全（进程越界写入其他进程内存，B 的所有状态都不可信）',chip:'总线仲裁（多设备同时争写，数据叠加为噪声，所有读取都无意义）'},
+   deps:['T1'],paServed:['PA2','PA5','PA6']},
+  {id:'T3',label:'T3 持续演化',short:'系统能不能永远运行下去？',
+   def:'系统必须能在理想条件下持续无限时间演化，不因内部机制缺陷在有限时间内耗尽、沉默、堵塞或爆炸。最小要求：资源不只耗不补；累积不只增不减；调度不中断；演化函数无死状态。',
+   why:'一个在有限时间内必然停机的系统，只是短程过程，不是长期自治系统。',
+   consequence:'永久沉默、资源耗尽停机、内部积压溢出、有限时间终止。',
+   case:'Agent B 在 mission_locked 场中 energy 以 -3/h 消耗。理论上存在 recovering 活动（+5/h），但 mission_locked 阻止活动切换。energy 到 0 后 P0 规则触发，但被 mission_locked 阻止。恢复路径"理论存在"但"实际不可达"，B 永久沉默。',
+   analogy:{physics:'非平衡定态（持续耗散但靠外部输入维持，不趋向热寂）',comp:'垃圾回收 + 调度器（无 GC 则 OOM；无调度则饥饿）',chip:'时钟信号 + 看门狗定时器（没有时钟停转；没有 watchdog 死锁后无法恢复）'},
+   deps:['T1','T2'],paServed:['PA2','PA3','PA4','PA6']},
+  {id:'T4',label:'T4 开放演化',short:'系统的运行有没有语义进展？',
+   def:'系统不仅要能持续运行（T3），还要避免在非预期条件下收敛到吸收态、僵死态，或陷入无语义进展的病态循环。"非预期/无意义"由系统设计层定义的进展投影 P(s) 来界定。',
+   why:'在 LLM-based 系统中 T4 极其常见失效：agent 不断重复输出、义务循环死锁、群聊消息飞但无 deliverable 产出。',
+   consequence:'假活性、假稳态、病态循环、形式运行但语义冻结。',
+   case:'A 等 B 完成义务 X，B 等 A 完成义务 Y（blocking_on 形成环）。两者 next_wakeup 正常更新（T3 满足），每 5 分钟各自演化一次。每次演化后继续等待——系统在两个状态间机械来回，永无进展。',
+   analogy:{physics:'系统陷入非目标极限环（粒子一直在动但永远无法到达目标区域）',comp:'活锁（livelock）——两个进程持续相互礼让，都没有实质推进',chip:'流水线气泡（时钟在转，但大量 NOP 导致有效指令吞吐量趋近零）'},
+   deps:['T3'],paServed:['PA8']},
+  {id:'T5',label:'T5 有效耦合',short:'主体与环境之间有没有真实的双向交互？',
+   def:'主体必须真实地受到环境影响，并真实地影响环境。系统不是若干自循环模块的并列，而是真正发生相互作用的多主体系统。最小要求：合法事件最终影响相应主体（观察侧）+ 合法动作最终改变相应世界（行动侧）。',
+   why:'若主体与环境没有真实耦合，"多智能体—世界系统"只是多个孤立状态机加一个空壳环境。',
+   consequence:'各自自循环的 agent 集合；不可感知的环境；不可作用的世界。',
+   case:'所有 agent 的 memory 设计为完全私有（各自独立 world 副本），没有共享 InteractionContext。A 在自己 world 副本中"发布"任务分配消息，但没有任何路由路径到达 B。两者各自独立演化——形式上都在运行（T3 满足），但根本不在"协作"。',
+   analogy:{physics:'粒子—场相互作用（牛顿第三定律）——主体既受场影响，也反作用于场',comp:'完整 I/O 系统（CPU 能读取输入，也能向输出写入）',chip:'传感—控制回路（传感器读取环境，执行器修改环境，缺一则开环）'},
+   deps:['T1'],paServed:['PA7','PA9']},
+],
+PA: [
+  {id:'PA1',label:'PA1 存在与可区分',group:'定义组',gcolor:'#5b8fcf',
+   question:'系统有没有良定义的状态空间与主体/环境/相互作用路径的区分？',
+   derivation:'T1 要求系统可被形式化描述 → 必须有可区分的主体/环境结构和全定义演化算子；T5 要求真实耦合 → 必须知道"谁在行动、谁被作用"。',
+   math:`∃ 状态空间 S:
+  S = S_agent ⊕ S_world ⊕ S_interaction
+  其中 S_agent ≠ ∅, S_world ≠ ∅
+
+∧ ∀ s ∈ S_legal, ∃ s' ∈ S_legal: transition(s) → s'
+  // 演化算子对任意合法状态全定义`,
+   consequence:'无法定义 agent、world、耦合；行为方向性无法定义；整个体系概念失去基础。',
+   case:'某实现将 agent 状态和 world 状态混写在同一个 JSON 文件中，没有边界。两个 agent 同时修改，产生不可预期合并。无法定义"哪条记录属于哪个 agent 的本体状态"。',
+   analogy:{physics:'相空间的存在性 + 哈密顿演化算子的全定义性',comp:'进程模型（kernel/user space 分离）+ 程序语义完整性',chip:'ISA 完整定义 + 地址空间分区（内核/用户分离）'},
+   servesT:[{T:'T1',s:'●'},{T:'T5',s:'●'}],complement:null},
+  {id:'PA2',label:'PA2 有界性',group:'边界组',gcolor:'#c47a3a',
+   question:'任何可能无界增长的状态量是否有上界或等价有界控制？',
+   derivation:'T2 要求状态在合法域内 → 无界状态必然越界；T3 要求无限演化 → 无界增长在有限时间内导致停机。',
+   math:`∀ X ∈ { 设计时识别的"可能无界增长"状态量 }:
+  ∃ B_X ∈ ℝ⁺: ∀ t ≥ 0, |X(t)| ≤ B_X
+
+// X 包括（不限于）：
+//   资源类：energy, attention_budget, token_budget
+//   累积类：memory_size, notification_count, context_count`,
+   consequence:'资源枯竭、内部积压爆炸、被历史拖死、在有限时间内丧失演化能力。',
+   case:'每次 agent 发消息都向所有其他 agent 发通知，且无 TTL。1000 轮后 50 个 agent 系统中每个有约 50,000 条 pending 通知。assemble 时 context window 溢出，系统无法演化。',
+   analogy:{physics:'有界 Lyapunov 函数（系统能量有上界）',comp:'垃圾回收（防内存泄漏）+ 队列深度限制（背压机制）',chip:'FIFO 深度上界 + DDR 容量限制 + 缓冲区边界保护'},
+   servesT:[{T:'T2',s:'●'},{T:'T3',s:'●'}],complement:'PA3'},
+  {id:'PA3',label:'PA3 可恢复性',group:'生存组',gcolor:'#5fa86a',
+   question:'任何可消耗的关键资源是否存在从耗尽态可达的严格正恢复路径？',
+   derivation:'PA2 保证资源不超过上界，但不保证不低于下界。PA3 专门保证"从任意低状态都能恢复"。PA2 + PA3 合起来才能保证 T3 的资源稳定性。',
+   math:`∀ R ∈ ConsumableResources:
+  ∀ s 满足 R(s) = R_min（耗尽态）:
+    ∃ path p: s →* s', 沿 p 有 ΔR > 0（严格正增量）
+    ∧ path p 在系统可达轨迹中存在（不只是理论存在，实际可达）`,
+   consequence:'任何消耗型动作都趋向永久停机；即使有上界（PA2 满足），系统也会在到达下界后卡死。',
+   case:'Agent B 所在场是 mission_locked，reaching 活动（+5/h）存在但需要退出场才能进入。energy 到 0 后 P0 触发但被阻止，恢复路径不可达，B 永久沉默。',
+   analogy:{physics:'热力学可逆抽运（从低能态可以通过抽运到高能态）',comp:'内存回收路径的存在 + 磁盘 I/O 请求的完成路径',chip:'充电控制器（电池从耗尽态可充电）+ 电压恢复电路'},
+   servesT:[{T:'T3',s:'●'}],complement:'PA2'},
+  {id:'PA4',label:'PA4 持续再进入',group:'生存组',gcolor:'#5fa86a',
+   question:'系统在任意可达状态下是否在有限时间内能重新获得一次合法演化机会？',
+   derivation:'T3 要求持续演化 → 系统不能永久失去演化机会；T5 要求有效耦合 → agent 必须能响应环境变化（需要被再次触发）。',
+   math:`∀ s ∈ S_reachable（任意可达状态）:
+  ∃ t' > t_now, ∃ component C: scheduled_evolution(C, t')
+  // 不要求 s 必须发生变化（静息合法），
+  // 只要求"有机会演化"不被永久失去`,
+   consequence:'系统即使当前状态合法，也可能永远沉默，变成"静态系统"。',
+   case:'三个 agent A、B、C 约定：A 等 B 回复后才设置 next_wakeup；B 等 C；C 等 A。初始时三者 next_wakeup 都是 null，没有时间驱动备用触发。系统永久沉默。',
+   analogy:{physics:'庞加莱递归定理（有界系统轨迹无限多次回归）',comp:'事件循环永不停止 + 调度器总有下一个 tick',chip:'时钟信号永不停止 + 看门狗定时器防止死锁'},
+   servesT:[{T:'T3',s:'●'},{T:'T5',s:'●'}],complement:'PA8'},
+  {id:'PA5',label:'PA5 写权唯一性',group:'定义组',gcolor:'#5b8fcf',
+   question:'每个 durable 状态分量是否都有且仅有一个直接写权限威者？',
+   derivation:'T1 要求可形式化 → 状态必须有唯一权威来源才能追溯；T2 要求合法性 → 多写者导致状态污染和矛盾。',
+   math:`∀ sᵢ ∈ S_durable（任意因果可追溯的状态分量）:
+  |{ C | can_directly_write(C, sᵢ) }| = 1
+
+∧ ∀ C' ≠ authoritative_writer(sᵢ):
+    C' → emit(event) → route → authoritative_writer(sᵢ).apply(event)
+    // 其他组件只能通过权威者的 apply 路径间接影响`,
+   consequence:'耦合边界消失；行为因果不可追踪；审计无法进行；系统变成不可验证的黑箱互写。',
+   case:'agent 的 active_key 既可以被 LLM 输出直接覆写，也可以被 ContextClosedEvent 处理逻辑自动重置。两者并发时竞争，结果取决于顺序，且无法追溯哪次写是"对的"。',
+   analogy:{physics:'哈密顿量的唯一性（系统演化由唯一演化算子决定）',comp:'Rust 的所有权系统（最多一个可变引用）+ 数据库单主写入原则',chip:'总线仲裁器（每个事务只有一个 master）+ 内存保护单元（MPU）'},
+   servesT:[{T:'T1',s:'●'},{T:'T2',s:'●'}],complement:null},
+  {id:'PA6',label:'PA6 效应有终局',group:'边界组',gcolor:'#c47a3a',
+   question:'任何效应是否都在有限时间内进入终态？',
+   derivation:'T2 要求合法性 → 永久悬挂的效应使状态不确定；T3 要求无限演化 → 无终局积压最终耗尽资源。',
+   math:`∀ e ∈ Effects_generated:
+  ∃ t_terminal: status(e, t_terminal) ∈ TerminalStates(type(e))
+
+// 各类型终态集合（设计时必须显式定义）：
+// Notification:   { consumed, expired, merged, archived }
+// Task/Obligation:{ satisfied, cancelled, expired }
+// ContextClose:   { applied, ignored, failed, archived }`,
+   consequence:'系统被历史效应拖死；无法区分哪些效应已完成；通知/义务无限积压。',
+   case:'"帮助请求"义务被创建后提出者离开，义务没有超时机制、没有被显式取消，永远保持 active。六个月后 50,000 个永远活跃的义务——每次 assemble 都要处理，系统崩溃。',
+   analogy:{physics:'激发态粒子自发辐射（任何不稳定粒子最终衰变到稳定产物）',comp:'RAII（资源生命周期有明确终点）+ GC finalization',chip:'握手协议完成（AXI 事务有 BVALID/BREADY 握手终结）'},
+   servesT:[{T:'T2',s:'●'},{T:'T3',s:'●'}],complement:'PA7'},
+  {id:'PA7',label:'PA7 信息可达性',group:'耦合组',gcolor:'#9472c4',
+   question:'有权接收某信息的主体，该信息是否在有限时间内（且有效期内）到达？',
+   derivation:'T5 要求有效耦合，"主体真实受到环境影响"。若合法应接收信息的主体永远接收不到，则环境变化无法影响主体，T5 的观察侧失效。',
+   math:`∀ info i, ∀ agent aᵢ where authorized_recipient(aᵢ, i):
+  ∃ t_delivery ≤ t_expiry(i): received(aᵢ, i, t_delivery)
+
+// 注意：
+// - 不要求"立刻到达"（可以有延迟）
+// - 但必须在信息有效期内到达
+// - 对无有效期信息：∃ t_delivery < +∞ 即可`,
+   consequence:'主体与环境解耦；重要事件永远无法影响相应 agent；系统退化为各自自循环的状态机。',
+   case:'紧急通知（semantic_class = hazard）被发往 agent B，告知烟雾警报。但系统注意力门槛配置错误：hazard 类通知被 attention_policy 过滤（应强制通过）。B 永远收不到通知，在危险环境中"正常工作"。',
+   analogy:{physics:'电磁信号有限速度传播（信号终将到达）',comp:'可靠消息传递（TCP at-least-once + 超时）',chip:'中断到达 CPU 的保证（IRQ 不被无限期屏蔽或丢失）'},
+   servesT:[{T:'T5',s:'●'}],complement:'PA9'},
+  {id:'PA8',label:'PA8 语义进展',group:'进展组',gcolor:'#c4643a',
+   question:'是否定义了目标相关进展投影 P(s)，且无语义进展的循环是否有自主逃离机制？',
+   derivation:'T4 要求系统不在非预期条件下陷入无语义进展的病态循环 → 必须能定义、检测、逃离此类循环。',
+   math:`∃ P: States → ProgressValue  // 目标相关的进展度量
+
+若 ∃ cycle C ⊆ reachable_trajectories,
+   ∀ s ∈ C: P(s) = P_constant（循环内 P 无净变化）
+则 ∃ escape_mechanism M:
+    Prob[system exits C via M] > 0  // 非零概率逃离（非确定性）
+  ∧ M 不依赖人工干预（自主触发）
+
+// 为什么用 Prob > 0 而非确定性：
+// 每次进入无进展状态时，系统都有非零机会逃离；
+// 概率始终非零 → 系统最终会逃离（Borel-Cantelli 引理）`,
+   consequence:'固定点僵死；周期性空转；无新信息注入后的假活性；不断触发但无任何语义进展。',
+   case:'5 个 agent 在任务场持续对话：A "我在思考"，B "好的继续"，C "我同意"……循环 200 次，send_message 频繁执行，日志充满记录，但没有 deliverable 被提交，没有 agenda 被更新，last_progress_at 从未更新。无 PA8 时，这个循环永远持续。',
+   analogy:{physics:'系统避免进入非目标吸引子（不陷入非目标极限环）',comp:'分布式系统进展性质（progress property）+ 活锁检测与打破',chip:'流水线向前推进（不只是有时钟，而是每个周期确实执行有意义的指令）+ 死锁检测'},
+   servesT:[{T:'T4',s:'●'},{T:'T3',s:'○'}],complement:'PA4'},
+  {id:'PA9',label:'PA9 观察—行动耦合',group:'耦合组',gcolor:'#9472c4',
+   question:'每个主体是否既能观察环境又能通过行动产生净效果？（双向成立）',
+   derivation:'T5 要求有效耦合，包含两个方向：观察侧（PA7 保证）+ 行动侧（PA9 保证）。若只能观察不能行动（或反之），耦合单向，不构成真实多主体系统。',
+   math:`∀ agent aᵢ ∈ Agents:
+  // 观察侧
+  ∃ ω_relevant ⊆ WorldState: aᵢ can_observe(ω_relevant)
+
+∧ // 行动侧
+  ∃ α ∈ Actions(aᵢ):
+    execute(aᵢ, α) → net_effect(WorldState) ≠ ∅
+    // 行动之后 WorldState 至少有一处实质性变化`,
+   consequence:'agent 退化为纯被动接收器（只观察）或盲目执行器（只行动）；真实多主体—世界系统不存在。',
+   case:'"观察者 agent" 只有 read_messages 权限，没有任何写操作权限。该 agent 看到所有消息，但无法发出任何有效行动。它自称系统"成员"，但对世界状态零影响——PA9 违反（行动侧退化），T5 失效。',
+   analogy:{physics:'牛顿第三定律（粒子既受场影响，也反作用于场）',comp:'完整 I/O 能力的进程（不只读，也能写）',chip:'双向总线（可发出请求，也可接受响应并产生结果）'},
+   servesT:[{T:'T5',s:'●'},{T:'T1',s:'○'}],complement:'PA7'},
+],
+G: [
+  {id:'Gm',label:'Gₘ 裁剪元原则',type:'meta',q:'什么样的要求才能进入 G 层？',PAs:['（设计判准，非PA具体化）'],dep:[]},
+  {id:'G0',label:'G0 存在性与本体',type:'core',q:'这个系统"是什么"？（本体结构）',PAs:['PA1','PA5'],dep:[]},
+  {id:'G1',label:'G1 合法状态域',type:'core',q:'系统在任意时刻是否合法？（硬不变量）',PAs:['PA2','PA5','PA6'],dep:['G0']},
+  {id:'G2',label:'G2 单步演化完备性',type:'core',q:'一次完整演化能跑完吗？（单步完备）',PAs:['PA1','PA4','PA5'],dep:['G0','G1']},
+  {id:'G3',label:'G3 持续稳定性',type:'core',q:'系统能永远跑下去吗？（长时稳定）',PAs:['PA2','PA3','PA4','PA6'],dep:['G0','G1','G2']},
+  {id:'G4',label:'G4 开放演化性',type:'core',q:'系统演化有语义意义吗？（不空转）',PAs:['PA8'],dep:['G3']},
+  {id:'G5',label:'G5 语义有效耦合',type:'parallel',q:'主体与环境的耦合是有效的吗？（语义耦合）',PAs:['PA7','PA9'],dep:['G0','G2']},
+  {id:'G6',label:'G6 一致性与可追溯',type:'parallel',q:'系统的状态变化能被追溯和恢复吗？（审计）',PAs:['PA5','PA6'],dep:['G0','G1']},
+  {id:'G7',label:'G7 认知连续性',type:'special',q:'LLM agent 在中断后能恢复工作上下文吗？（特化）',PAs:['PA2','PA4','PA5'],dep:['G3','G6']},
+  {id:'G8',label:'G8 工程鲁棒性',type:'engineering',q:'在真实计算机环境中，以上目标能稳定成立吗？（工程增强）',PAs:['PA2–PA9'],dep:['G0','G1','G2','G3','G4','G5','G6','G7']},
+],
+gMatrix:[
+  // rows = G0..G8, cols = G0..G8
+  // format: {from, to, strength} strength: ●/○/↑
+  {f:'G1',t:'G0',s:'●'},{f:'G2',t:'G0',s:'●'},{f:'G2',t:'G1',s:'●'},
+  {f:'G3',t:'G0',s:'●'},{f:'G3',t:'G1',s:'●'},{f:'G3',t:'G2',s:'●'},
+  {f:'G4',t:'G3',s:'●'},{f:'G4',t:'G0',s:'○'},{f:'G4',t:'G1',s:'○'},{f:'G4',t:'G2',s:'○'},
+  {f:'G5',t:'G0',s:'●'},{f:'G5',t:'G2',s:'●'},{f:'G5',t:'G1',s:'○'},
+  {f:'G6',t:'G0',s:'●'},{f:'G6',t:'G1',s:'●'},{f:'G6',t:'G2',s:'○'},{f:'G6',t:'G3',s:'○'},
+  {f:'G7',t:'G3',s:'●'},{f:'G7',t:'G6',s:'●'},{f:'G7',t:'G0',s:'○'},{f:'G7',t:'G1',s:'○'},{f:'G7',t:'G2',s:'○'},{f:'G7',t:'G4',s:'○'},
+  {f:'G8',t:'G0',s:'↑'},{f:'G8',t:'G1',s:'↑'},{f:'G8',t:'G2',s:'↑'},{f:'G8',t:'G3',s:'↑'},{f:'G8',t:'G4',s:'↑'},{f:'G8',t:'G5',s:'↑'},{f:'G8',t:'G6',s:'↑'},{f:'G8',t:'G7',s:'↑'},
+],
+paGroups:[
+  {name:'定义组',color:'#5b8fcf',desc:'服务 T1 为主',members:['PA1','PA5']},
+  {name:'边界组',color:'#c47a3a',desc:'服务 T2 为主',members:['PA2','PA6']},
+  {name:'生存组',color:'#5fa86a',desc:'服务 T3 为主',members:['PA3','PA4']},
+  {name:'进展组',color:'#c4643a',desc:'服务 T4（独立对应）',members:['PA8']},
+  {name:'耦合组',color:'#9472c4',desc:'服务 T5 为主',members:['PA7','PA9']},
+],
+paComplements:[
+  {a:'PA2',b:'PA3',desc:'PA2 有界防爆炸 ↔ PA3 可恢复防耗尽。合起来保证资源处于 [R_min, B_R] 内的健康区间。PA2 单独不够：有上界但单调下降，最终还是停机；PA3 单独不够：有恢复但无上界，最终还是爆炸。'},
+  {a:'PA6',b:'PA7',desc:'PA6 防止"效应永久悬挂"↔ PA7 防止"信息永远到不了"。两者共同保证效应的"发出—接收—终局"闭环。'},
+  {a:'PA7',b:'PA9',desc:'PA7 保证主体能观察到环境（信息到达）↔ PA9 保证主体能作用于环境（行动有效）。两者共同构成 T5 有效耦合的双向闭环。缺 PA7：盲目执行器；缺 PA9：纯被动接收器。'},
+  {a:'PA4',b:'PA8',desc:'PA4 保证"系统总能被再次触发演化"↔ PA8 保证"被触发的演化产生语义进展"。PA4 是存在性条件（有没有机会），PA8 是质量条件（机会是否有意义）。缺 PA4：agent 静默；缺 PA8：agent 不断唤醒但空转。'},
+],
+derivPaths:{
+  T1:{PAs:['PA1','PA5'],
+    paths:[
+      {PA:'PA1',Gs:['G0（粒子构成、状态分层、三元组 P=(V,View,R)）','G2-R006（无死状态原则）']},
+      {PA:'PA5',Gs:['G0（Source of Truth Table）','G1（写隔离不变量、唯一真源不变量）','G6-R001（所有 durable 变更产生可重放记录）']},
+    ]},
+  T2:{PAs:['PA2','PA5','PA6'],
+    paths:[
+      {PA:'PA2',Gs:['G1-R007（energy ∈ [0,100]）']},
+      {PA:'PA5',Gs:['G1-R001（写隔离原则）','G1-R005（基线不被场/活动污染）','G1-R012（唯一真源不变量）']},
+      {PA:'PA6',Gs:['G1-R010（通知必须有终局）','G1-R011（surfaced ≠ acknowledged）']},
+    ]},
+  T3:{PAs:['PA2','PA3','PA4','PA6'],
+    paths:[
+      {PA:'PA2',Gs:['G3-R006（memory 必须有界）','G3-R008（notification_buffer 必须有界）']},
+      {PA:'PA3',Gs:['G3-R004（能量恢复路径必须存在）','G3-R005（能量动力学模型）']},
+      {PA:'PA4',Gs:['G3-R001（time-driven 调度）','G3-R003（next_wakeup 永不为 null）','G2-R001（四阶段演化完整）']},
+      {PA:'PA6',Gs:['G3-R009（通知终局最小实现）','G3-R010（通知 TTL）']},
+    ]},
+  T4:{PAs:['PA8'],
+    paths:[
+      {PA:'PA8',Gs:['G4-R001（有效进展定义 P(s)）','G4-R002（进展追踪：last_progress_at）','G4-R003（逃离机制必须存在）','G4-R004（软逃离信号）','G4-R005（强逃离保障）','G4-R007（消息流动 ≠ 语义进展）','G8-R009（N-tick 超时逃生，工程实现）']},
+    ]},
+  T5:{PAs:['PA7','PA9','PA1（次要）'],
+    paths:[
+      {PA:'PA7',Gs:['G5-R009（local/external 阈值区分）','G5-R010（生命威胁强制唤醒）','G5-R011（用户直接输入高权限）','G5-R014（View_A 基于 field 决定）']},
+      {PA:'PA9',Gs:['G5-R001（Field 与 Activity 分开建模）','G5-R002（运行时行为由三者共同决定）','G5-R007（RuntimeEnvelope 桥接函数）','G5-R017（动作可达域由场与活动共同决定）']},
+    ]},
+},
+analogyLayers:[
+  {layer:'T 层（本质目标）',physics:'守恒律——对任何物理系统成立',comp:'程序正确性公理（终止性、安全性、活性）',chip:'数字电路功能规范（timing closure、正确逻辑功能）'},
+  {layer:'PA 层（抽象公理）',physics:'动力学约束（哈密顿量存在性、Noether 定理应用条件）',comp:'类型论公理（type safety 的最小条件）',chip:'芯片设计规则（DRC 规则、时序约束）'},
+  {layer:'G 层（系统目标）',physics:'具体力学方程（F=ma、麦克斯韦方程组）',comp:'具体编程语言的类型系统和内存模型',chip:'具体 IP 核接口规范（AXI 协议、AMBA 总线规范）'},
+],
+analogyPA:[
+  {pa:'PA1 存在与可区分',physics:'相空间的存在性 + 哈密顿演化算子的全定义性',comp:'进程模型（kernel/user space 分离）+ 程序语义完整性',chip:'ISA 完整定义 + 地址空间分区'},
+  {pa:'PA2 有界性',physics:'有界 Lyapunov 函数（系统能量有上界）',comp:'垃圾回收（防内存泄漏）+ 队列深度限制（背压）',chip:'FIFO 深度上界 + DDR 容量限制'},
+  {pa:'PA3 可恢复性',physics:'热力学可逆抽运（从低能态泵回高能态）',comp:'内存回收路径的存在 + I/O 请求的完成路径',chip:'充电控制器（电池从耗尽态可充电）+ 电压恢复电路'},
+  {pa:'PA4 持续再进入',physics:'庞加莱递归定理（有界系统轨迹无限多次回归）',comp:'事件循环永不停止 + 调度器总有下一个 tick',chip:'时钟信号永不停止 + 看门狗定时器'},
+  {pa:'PA5 写权唯一性',physics:'哈密顿量的唯一性（演化由唯一算子决定）',comp:'Rust 所有权系统 + 数据库单主写入原则',chip:'总线仲裁器（每个事务只有一个 master）+ MPU'},
+  {pa:'PA6 效应有终局',physics:'激发态粒子自发辐射（最终衰变到基态）',comp:'RAII（资源生命周期有确定终点）+ GC finalization',chip:'握手协议完成（AXI 事务有 BVALID/BREADY 握手终结）'},
+  {pa:'PA7 信息可达性',physics:'电磁信号有限速度传播（信号终将到达）',comp:'可靠消息传递（TCP at-least-once + 超时）',chip:'中断到达 CPU 的保证（IRQ 不被无限期屏蔽）'},
+  {pa:'PA8 语义进展',physics:'系统避免进入非目标吸引子（不陷入非目标极限环）',comp:'分布式系统进展性质 + 活锁检测与打破',chip:'流水线向前推进（不只是有时钟，还要有意义推进）+ 死锁检测'},
+  {pa:'PA9 观察—行动耦合',physics:'牛顿第三定律（粒子既受场影响，也反作用于场）',comp:'完整 I/O 能力的进程（不只读，也能写）',chip:'双向总线（read + write）+ 中断处理与寄存器写回闭环'},
+],
+analogyConcepts:[
+  {concept:'状态',T:'系统在某一时刻的所有可区分性质',PA:'形式化状态空间 S 中的一个点',G:'V_A × V_B₁ × ... × V_Bₙ（S_global）'},
+  {concept:'演化',T:'系统从当前状态到下一状态的转变',PA:'全定义演化算子 δ: S_legal → S_legal',G:'assemble→evolve→emit→apply 四阶段'},
+  {concept:'耦合',T:'主体与环境的真实相互作用',PA:'观察函数 f_obs + 行动函数 f_act（双向）',G:'FieldProfile × canInject × allowedActions'},
+  {concept:'有界',T:'不能无限增长',PA:'∀X: X ≤ B_X < ∞（设计时识别）',G:'energy ∈[0,100]，notification TTL，memory 分层'},
+  {concept:'终局',T:'效应最终进入确定状态',PA:'∀e: ∃t_terminal: status(e) ∈ Terminal',G:'Notification: consumed/expired/merged/archived'},
+  {concept:'真源',T:'状态的权威来源',PA:'写权唯一者 authoritative_writer(sᵢ)',G:'Global Event Log + 粒子本体变量（Source of Truth Table）'},
+  {concept:'进展',T:'系统语义上向目标靠近',PA:'ΔP(s) > 0（P 为目标相关进展投影）',G:'义务完成、议程推进、任务交付'},
+  {concept:'可恢复',T:'被消耗的资源有补充路径',PA:'∃ path: s_{R=R_min} →* s\' 且 ΔR > 0',G:'energy_profile=recovering 的活动预设必须存在'},
+],
+values:[
+  {name:'裁剪能力',problem:'不知道哪条要求可以删除',solution:'Gₘ 判准：找不到 PA 追溯的要求，不进主干'},
+  {name:'完备性验证',problem:'不知道是否遗漏了什么',solution:'PA→G 映射：每条 PA 都应在 G 层有具体化'},
+  {name:'层级分离',problem:'理想要求和工程补丁混写',solution:'G0-G7 是理想层，G8 是工程层，明确区分'},
+  {name:'可移植性',problem:'换了架构，不知道哪些要求还成立',solution:'T 和 PA 不与架构绑定，可以重新推导 G 层'},
+  {name:'风险评估',problem:'不知道缺失某条要求的后果',solution:'每条要求可追溯到 T，知道违反的严重程度'},
+  {name:'解释能力',problem:'要求无法向外部解释清楚',solution:'任何要求都有完整的 T→PA→G 推导链'},
+],
+};
+
+// ============================================================
+// HELPERS
+// ============================================================
+const ns='http://www.w3.org/2000/svg';
+function svgEl(tag,attrs={},txt=null){const e=document.createElementNS(ns,tag);for(const[k,v] of Object.entries(attrs))e.setAttribute(k,v);if(txt!==null)e.textContent=txt;return e}
+function nodeColor(id){if(id.startsWith('T'))return'#5b8fcf';if(id.startsWith('PA'))return'#9472c4';if(id==='G8')return'#c4943a';if(id==='G7')return'#c4637a';if(id==='Gm')return'#7a7a8a';return'#5fa86a'}
+function layerTag(id){if(id.startsWith('T'))return{text:'T 层',cls:'tag-T'};if(id.startsWith('PA'))return{text:'PA 层',cls:'tag-PA'};return{text:'G 层',cls:'tag-G'}}
+
+// SIDE PANEL
+function showDetail(id){
+  const all=[...D.T,...D.PA,...D.G];
+  const node=all.find(n=>n.id===id);
+  if(!node)return;
+  const side=document.getElementById('side-panel');
+  const content=document.getElementById('side-content');
+  side.classList.remove('hidden');
+  const lt=layerTag(id);
+  document.getElementById('side-layer-tag').innerHTML=`<span class="tag ${lt.cls}">${lt.text}</span>`;
+  let html='';
+  html+=`<div class="detail-id" style="color:${nodeColor(id)}">${node.id}</div>`;
+  html+=`<div class="detail-label">${node.label||node.id}</div>`;
+  if(node.question||node.q)html+=`<div class="detail-question">${node.question||node.q}</div>`;
+  if(node.def){
+    html+=`<div class="detail-section"><h4>定义</h4><p>${node.def}</p></div>`;
+  }
+  if(node.derivation){
+    html+=`<div class="detail-section"><h4>从 T 推导</h4><p>${node.derivation}</p></div>`;
+  }
+  if(node.why){
+    html+=`<div class="detail-section"><h4>为何必要</h4><p>${node.why}</p></div>`;
+  }
+  if(node.math){
+    html+=`<div class="detail-section"><h4>数学表达</h4><div class="math-box">${escHtml(node.math)}</div></div>`;
+  }
+  if(node.consequence){
+    html+=`<div class="detail-section"><h4>若不满足</h4><p>${node.consequence}</p></div>`;
+  }
+  if(node.case){
+    html+=`<div class="detail-section"><h4>违反案例</h4><div class="case-box">${node.case}</div></div>`;
+  }
+  if(node.analogy){
+    html+=`<div class="detail-section"><h4>跨域类比</h4><table class="analogy-table">`;
+    html+=`<tr><td>物理</td><td>${node.analogy.physics}</td></tr>`;
+    html+=`<tr><td>计算机</td><td>${node.analogy.comp}</td></tr>`;
+    html+=`<tr><td>芯片</td><td>${node.analogy.chip}</td></tr>`;
+    html+=`</table></div>`;
+  }
+  if(node.servesT){
+    html+=`<div class="detail-section"><h4>服务的 T 目标</h4>`;
+    node.servesT.forEach(({T,s})=>{
+      html+=`<span class="badge ${s==='●'?'badge-main':'badge-sec'}" style="margin-right:6px">${s}</span><span class="tag tag-T">${T}</span>&nbsp;`;
+    });
+    html+='</div>';
+  }
+  if(node.PAs&&Array.isArray(node.PAs)){
+    html+=`<div class="detail-section"><h4>具体化的 PA</h4>`;
+    node.PAs.forEach(pa=>{html+=`<span class="tag tag-PA">${pa}</span>&nbsp;`;});
+    html+='</div>';
+  }
+  if(node.dep&&node.dep.length){
+    html+=`<div class="detail-section"><h4>前置依赖</h4>`;
+    node.dep.forEach(d=>{html+=`<span class="tag tag-G">${d}</span>&nbsp;`;});
+    html+='</div>';
+  }
+  content.innerHTML=html;
+}
+function closeSide(){document.getElementById('side-panel').classList.add('hidden')}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+// ============================================================
+// VIEW: PANORAMA
+// ============================================================
+function initPanorama(){
+  const svg=document.getElementById('pano-svg');
+  svg.innerHTML='';
+  const W=1100,H=640;
+  const layers=[
+    {id:'T',label:'T 层 · 本质目标层',color:'#5b8fcf',y:80,nodes:D.T,nw:160,nh:38},
+    {id:'PA',label:'PA 层 · 抽象公理层',color:'#9472c4',y:290,nodes:D.PA,nw:150,nh:36},
+    {id:'G',label:'G 层 · 当前系统目标层',color:'#5fa86a',y:510,nodes:[...D.G.filter(g=>g.id!=='Gm')],nw:140,nh:34},
+  ];
+
+  // Background lanes
+  const laneY=[50,255,470];const laneH=[180,200,165];
+  laneY.forEach((ly,i)=>{
+    const rect=svgEl('rect',{x:10,y:ly,width:W-20,height:laneH[i],rx:10,fill:i===0?'rgba(91,143,207,.06)':i===1?'rgba(148,114,196,.06)':'rgba(95,168,106,.06)',stroke:i===0?'rgba(91,143,207,.2)':i===1?'rgba(148,114,196,.2)':'rgba(95,168,106,.2)','stroke-width':1});
+    svg.appendChild(rect);
+    const t=svgEl('text',{x:24,y:ly+20,fill:layers[i].color,'font-size':12,'font-weight':'700'});
+    t.textContent=layers[i].label;svg.appendChild(t);
+  });
+
+  // Layer arrows
+  [[230,'须满足 →'],[460,'落地为 →']].forEach(([ay,txt])=>{
+    const p=svgEl('path',{d:`M ${W/2-30} ${ay} L ${W/2+30} ${ay}`,stroke:'#555568','stroke-width':1.5,'stroke-dasharray':'4 3',fill:'none','marker-end':'url(#arr)'});
+    svg.appendChild(p);
+    const t=svgEl('text',{x:W/2+36,y:ay+4,fill:'#555568','font-size':11});t.textContent=txt;svg.appendChild(t);
+  });
+
+  // Arrow marker
+  const defs=svgEl('defs');
+  const marker=svgEl('marker',{id:'arr',markerWidth:8,markerHeight:8,refX:6,refY:3,orient:'auto'});
+  const mp=svgEl('path',{d:'M0,0 L0,6 L8,3 z',fill:'#555568'});
+  marker.appendChild(mp);defs.appendChild(marker);svg.appendChild(defs);
+
+  // Compute node positions
+  const positions={};
+  layers.forEach(layer=>{
+    const n=layer.nodes.length;
+    const totalW=n*layer.nw+(n-1)*16;
+    const x0=(W-totalW)/2;
+    layer.nodes.forEach((node,i)=>{
+      positions[node.id]={x:x0+i*(layer.nw+16),y:layer.y-layer.nh/2,w:layer.nw,h:layer.nh,cx:x0+i*(layer.nw+16)+layer.nw/2,cy:layer.y};
+    });
+  });
+
+  // Edges T→PA
+  const edgeGrp=svgEl('g',{opacity:.5});
+  D.T.forEach(t=>{
+    const pa_served=D.PA.filter(pa=>pa.servesT.some(s=>s.T===t.id));
+    pa_served.forEach(pa=>{
+      const from=positions[t.id],to=positions[pa.id];
+      if(!from||!to)return;
+      const mx=(from.cx+to.cx)/2;
+      const path=svgEl('path',{d:`M ${from.cx} ${from.cy+from.h/2} C ${from.cx} ${from.cy+60}, ${to.cx} ${to.cy-60}, ${to.cx} ${to.cy-to.h/2}`,fill:'none',stroke:'rgba(91,143,207,.25)','stroke-width':1});
+      edgeGrp.appendChild(path);
+    });
+  });
+  // Edges PA→G
+  D.PA.forEach(pa=>{
+    const gNodes=[...D.G.filter(g=>g.id!=='Gm')].filter(g=>g.PAs.includes(pa.id));
+    gNodes.forEach(g=>{
+      const from=positions[pa.id],to=positions[g.id];
+      if(!from||!to)return;
+      const path=svgEl('path',{d:`M ${from.cx} ${from.cy+from.h/2} C ${from.cx} ${from.cy+60}, ${to.cx} ${to.cy-60}, ${to.cx} ${to.cy-to.h/2}`,fill:'none',stroke:'rgba(148,114,196,.2)','stroke-width':1});
+      edgeGrp.appendChild(path);
+    });
+  });
+  svg.appendChild(edgeGrp);
+
+  // Nodes
+  layers.forEach(layer=>{
+    layer.nodes.forEach(node=>{
+      const pos=positions[node.id];if(!pos)return;
+      const g=svgEl('g',{class:'node','data-id':node.id});
+      const color=nodeColor(node.id);
+      const rect=svgEl('rect',{x:pos.x,y:pos.y,width:pos.w,height:pos.h,rx:5,fill:`${color}22`,stroke:color,'stroke-width':1.5});
+      const shortLabel=(node.label||node.id).length>16?(node.id):(node.label||node.id).replace(/^(T\d|PA\d|G\d+)/,'$1');
+      const t1=svgEl('text',{x:pos.cx,y:pos.cy-5,'text-anchor':'middle','dominant-baseline':'middle',fill:color,'font-size':12,'font-weight':'700'});
+      t1.textContent=node.id;
+      const t2=svgEl('text',{x:pos.cx,y:pos.cy+8,'text-anchor':'middle','dominant-baseline':'middle',fill:'#aaa','font-size':9});
+      const lbl=(node.label||'').replace(node.id+' ','').replace(node.id,'');
+      t2.textContent=lbl.slice(0,18);
+      g.appendChild(rect);g.appendChild(t1);g.appendChild(t2);
+      g.addEventListener('click',()=>showDetail(node.id));
+      svg.appendChild(g);
+    });
+  });
+}
+
+// ============================================================
+// VIEW: T LAYER
+// ============================================================
+function initTLayer(){
+  // chain
+  const chain=document.getElementById('t-chain');
+  chain.innerHTML='';
+  const order=['T1','T2','T3','T4'];
+  order.forEach((tid,i)=>{
+    const t=D.T.find(x=>x.id===tid);
+    const div=document.createElement('div');div.className='chain-node';
+    div.innerHTML=`<div style="font-weight:700;color:${nodeColor(tid)}">${t.label}</div><div class="q">${t.short}</div>`;
+    div.onclick=()=>showDetail(tid);
+    chain.appendChild(div);
+    if(i<order.length-1){const arr=document.createElement('div');arr.className='chain-arrow';arr.textContent='↓';chain.appendChild(arr);}
+  });
+  // T5 aside
+  const t5note=document.createElement('div');
+  t5note.style='margin-top:10px;padding:8px 12px;background:rgba(91,143,207,.08);border-radius:5px;border:1px solid rgba(91,143,207,.2);font-size:.82rem;cursor:pointer';
+  const t5=D.T.find(x=>x.id==='T5');
+  t5note.innerHTML=`<span style="color:#5b8fcf;font-weight:700">T5 有效耦合</span>&nbsp;<span style="color:var(--muted)">── 并行约束，在 T1 之后始终有效</span><div style="color:var(--muted);font-size:.78rem;margin-top:2px">${t5.short}</div>`;
+  t5note.onclick=()=>showDetail('T5');
+  chain.appendChild(t5note);
+
+  // cards
+  const cards=document.getElementById('t-cards');cards.innerHTML='';
+  D.T.forEach(t=>{
+    const div=document.createElement('div');div.className='card';div.style='cursor:pointer';
+    div.onclick=()=>showDetail(t.id);
+    div.innerHTML=`
+      <h3 style="color:${nodeColor(t.id)}">${t.label}</h3>
+      <div class="detail-question">${t.short}</div>
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:6px">${t.def.slice(0,120)}…</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">
+        ${t.paServed.map(p=>`<span class="tag tag-PA">${p}</span>`).join('')}
+        <span style="font-size:.75rem;color:var(--muted);align-self:center">→ 需要这些 PA</span>
+      </div>`;
+    cards.appendChild(div);
+  });
+}
+
+// ============================================================
+// VIEW: PA LAYER
+// ============================================================
+function initPALayer(){
+  // Groups
+  const groups=document.getElementById('pa-groups');groups.innerHTML='';
+  D.paGroups.forEach(g=>{
+    const div=document.createElement('div');div.className='pa-group-card';
+    const hdr=document.createElement('div');hdr.className='pa-group-header';
+    hdr.style=`background:${g.color}22;color:${g.color};border-bottom:1px solid ${g.color}33`;
+    hdr.textContent=`${g.name} · ${g.desc}`;
+    const body=document.createElement('div');body.className='pa-group-body';
+    g.members.forEach(pid=>{
+      const pa=D.PA.find(x=>x.id===pid);
+      const item=document.createElement('div');item.className='pa-item';
+      item.innerHTML=`<span class="pa-dot" style="background:${g.color}"></span><span>${pa?pa.label:pid}</span>`;
+      item.onclick=()=>showDetail(pid);
+      body.appendChild(item);
+    });
+    div.appendChild(hdr);div.appendChild(body);
+    groups.appendChild(div);
+  });
+
+  // Complement pairs
+  const pairs=document.getElementById('pa-pairs');pairs.innerHTML='';
+  D.paComplements.forEach(pair=>{
+    const div=document.createElement('div');div.className='pair-card';
+    const row=document.createElement('div');row.className='pair-row';
+    const paA=D.PA.find(x=>x.id===pair.a),paB=D.PA.find(x=>x.id===pair.b);
+    row.innerHTML=`
+      <div class="pair-node" onclick="showDetail('${pair.a}')">${paA?paA.label:pair.a}</div>
+      <div class="pair-arrow">↔</div>
+      <div class="pair-node" onclick="showDetail('${pair.b}')">${paB?paB.label:pair.b}</div>`;
+    const desc=document.createElement('div');desc.className='pair-desc';desc.textContent=pair.desc;
+    div.appendChild(row);div.appendChild(desc);
+    pairs.appendChild(div);
+  });
+
+  // PA→T Matrix
+  const mat=document.getElementById('pa-t-matrix');mat.innerHTML='';
+  const tIds=D.T.map(t=>t.id);
+  const table=document.createElement('table');table.className='matrix';
+  const thead=document.createElement('thead');
+  const hrow=document.createElement('tr');
+  hrow.innerHTML='<th class="row-head">PA 公理 / T 目标</th>'+tIds.map(tid=>{const t=D.T.find(x=>x.id===tid);return`<th>${tid}<br><span style="font-size:.72rem;font-weight:400;color:var(--muted)">${(t.short||'').slice(0,8)}</span></th>`}).join('');
+  thead.appendChild(hrow);table.appendChild(thead);
+  const tbody=document.createElement('tbody');
+  D.PA.forEach(pa=>{
+    const row=document.createElement('tr');
+    row.innerHTML=`<th class="row-head" style="cursor:pointer" onclick="showDetail('${pa.id}')">${pa.label}</th>`;
+    tIds.forEach(tid=>{
+      const cell=row.insertCell(-1);
+      const s=pa.servesT.find(x=>x.T===tid);
+      if(!s){cell.className='cell-none';cell.textContent='—'}
+      else if(s.s==='●'){cell.className='cell-main';cell.textContent='●'}
+      else{cell.className='cell-sec';cell.textContent='○'}
+      cell.title=s?`${pa.id} → ${tid}（${s.s==='●'?'主要服务':'次要服务'}）`:`${pa.id} 不直接服务 ${tid}`;
+    });
+    tbody.appendChild(row);
+  });
+  table.appendChild(tbody);mat.appendChild(table);
+}
+
+// ============================================================
+// VIEW: G LAYER
+// ============================================================
+function initGLayer(){
+  // Chain
+  const chain=document.getElementById('g-chain');chain.innerHTML='';
+  const serial=['Gm','G0','G1','G2','G3','G4'];
+  const typeColors={meta:'#7a7a8a',core:'#5fa86a',parallel:'#5b8fcf',special:'#c4637a',engineering:'#c4943a'};
+  serial.forEach((gid,i)=>{
+    const g=D.G.find(x=>x.id===gid);if(!g)return;
+    const div=document.createElement('div');div.className='chain-node';div.style=`border-color:${typeColors[g.type]||'#5fa86a'}55;cursor:pointer`;
+    div.innerHTML=`<span style="font-weight:700;color:${typeColors[g.type]||'#5fa86a'}">${g.label}</span>&nbsp;<span style="font-size:.78rem;color:var(--muted)">${g.q}</span>`;
+    div.onclick=()=>showDetail(gid);
+    chain.appendChild(div);
+    if(i<serial.length-1){const arr=document.createElement('div');arr.className='chain-arrow';arr.textContent='↓';chain.appendChild(arr);}
+  });
+  // Parallel G5 G6
+  const para=document.createElement('div');para.className='chain-parallel';para.style='margin-top:8px';
+  ['G5','G6'].forEach(gid=>{
+    const g=D.G.find(x=>x.id===gid);
+    const div=document.createElement('div');div.className='chain-node';div.style='cursor:pointer;border-color:rgba(91,143,207,.3)';
+    div.innerHTML=`<span style="font-weight:700;color:#5b8fcf">${g.label}</span><div class="q">${g.q}</div>`;
+    div.onclick=()=>showDetail(gid);
+    para.appendChild(div);
+  });
+  chain.appendChild(para);
+  // G7 G8
+  const g78=document.createElement('div');g78.className='chain-parallel';g78.style='margin-top:8px';
+  ['G7','G8'].forEach(gid=>{
+    const g=D.G.find(x=>x.id===gid);
+    const div=document.createElement('div');div.className='chain-node';div.style=`cursor:pointer;border-color:${typeColors[g.type]||'#5fa86a'}55`;
+    div.innerHTML=`<span style="font-weight:700;color:${typeColors[g.type]}">${g.label}</span><div class="q">${g.q}</div>`;
+    div.onclick=()=>showDetail(gid);
+    g78.appendChild(div);
+  });
+  chain.appendChild(g78);
+
+  // Matrix
+  const mat=document.getElementById('g-matrix');mat.innerHTML='';
+  const gids=D.G.filter(g=>g.id!=='Gm').map(g=>g.id);
+  const table=document.createElement('table');table.className='matrix';
+  const thead=document.createElement('thead');
+  const hrow=document.createElement('tr');
+  hrow.innerHTML='<th class="row-head">依赖关系（行依赖列）</th>'+gids.map(gid=>`<th>${gid}</th>`).join('');
+  thead.appendChild(hrow);table.appendChild(thead);
+  const tbody=document.createElement('tbody');
+  gids.forEach(rowId=>{
+    const row=document.createElement('tr');
+    const g=D.G.find(x=>x.id===rowId);
+    row.innerHTML=`<th class="row-head" style="cursor:pointer" onclick="showDetail('${rowId}')">${g?g.label:rowId}</th>`;
+    gids.forEach(colId=>{
+      const cell=row.insertCell(-1);
+      if(rowId===colId){cell.textContent='—';cell.style='color:var(--muted2)'}
+      else{
+        const entry=D.gMatrix.find(e=>e.f===rowId&&e.t===colId);
+        if(!entry){cell.textContent='';cell.style='color:var(--muted2)'}
+        else if(entry.s==='●'){cell.className='cell-main';cell.textContent='●';cell.title=`${rowId} 强依赖 ${colId}`}
+        else if(entry.s==='○'){cell.className='cell-sec';cell.textContent='○';cell.title=`${rowId} 弱依赖 ${colId}`}
+        else{cell.className='cell-eng';cell.textContent='↑';cell.title=`G8 工程增强 ${colId}`}
+      }
+    });
+    tbody.appendChild(row);
+  });
+  table.appendChild(tbody);mat.appendChild(table);
+
+  // G cards
+  const cards=document.getElementById('g-cards');cards.innerHTML='';
+  D.G.forEach(g=>{
+    const tc=typeColors[g.type]||'#5fa86a';
+    const div=document.createElement('div');div.className='card';div.style='cursor:pointer';
+    div.onclick=()=>showDetail(g.id);
+    div.innerHTML=`
+      <div style="font-size:.75rem;color:${tc};margin-bottom:4px;font-weight:600">${{meta:'裁剪元原则',core:'核心串行',parallel:'并行目标',special:'系统特化',engineering:'工程增强'}[g.type]||g.type}</div>
+      <h3 style="color:${tc}">${g.label}</h3>
+      <div style="font-size:.82rem;color:var(--muted);margin:4px 0">${g.q}</div>
+      <div>${g.PAs.map(p=>`<span class="tag tag-PA" style="font-size:.72rem">${p}</span>`).join('')}</div>`;
+    cards.appendChild(div);
+  });
+}
+
+// ============================================================
+// VIEW: DERIVATION
+// ============================================================
+function initDerivation(){
+  const btns=document.getElementById('deriv-t-buttons');
+  btns.innerHTML='';
+  D.T.forEach(t=>{
+    const btn=document.createElement('button');
+    btn.style=`padding:7px 14px;border:1px solid var(--T-border);background:var(--T-dim);color:var(--T);border-radius:5px;cursor:pointer;font-size:.84rem`;
+    btn.textContent=t.label;
+    btn.onclick=()=>renderDeriv(t.id);
+    btns.appendChild(btn);
+  });
+  renderDeriv('T1');
+}
+function renderDeriv(tid){
+  const content=document.getElementById('deriv-content');
+  const t=D.T.find(x=>x.id===tid);
+  const dp=D.derivPaths[tid];
+  if(!t||!dp){content.innerHTML='<div style="color:var(--muted)">暂无数据</div>';return;}
+  let html=`<div class="card" style="border-color:var(--T-border);margin-bottom:14px">
+    <h3 style="color:var(--T)">${t.label}</h3>
+    <div style="font-size:.82rem;color:var(--muted)">${t.short}</div>
+  </div>
+  <div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">↓ 公理化 → 需要以下 PA 公理</div>`;
+  dp.paths.forEach(path=>{
+    const pa=D.PA.find(x=>x.id===path.PA);
+    html+=`<div class="card" style="border-color:var(--PA-border);margin-bottom:14px;cursor:pointer" onclick="showDetail('${path.PA}')">
+      <h3 style="color:var(--PA)">${pa?pa.label:path.PA}</h3>
+      <div style="font-size:.8rem;color:var(--muted);margin:4px 0">${pa?pa.question:''}</div>
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:8px">↓ 在粒子体系中具体化为以下 G 要求</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">`;
+    path.Gs.forEach(g=>{
+      html+=`<span style="background:var(--G-dim);border:1px solid var(--G-border);border-radius:4px;padding:3px 8px;font-size:.76rem;color:var(--G)">${escHtml(g)}</span>`;
+    });
+    html+=`</div></div>`;
+  });
+  content.innerHTML=html;
+}
+
+// ============================================================
+// VIEW: ANALOGY
+// ============================================================
+function initAnalogy(){
+  // Layer analogy
+  const layerTbl=document.getElementById('layer-analogy');
+  layerTbl.innerHTML=`<thead><tr><th>层级</th><th>物理类比</th><th>计算机类比</th><th>芯片/硬件类比</th></tr></thead><tbody>${
+    D.analogyLayers.map(r=>`<tr><td style="font-weight:700;white-space:nowrap">${r.layer}</td><td>${r.physics}</td><td>${r.comp}</td><td>${r.chip}</td></tr>`).join('')
+  }</tbody>`;
+
+  // PA analogy
+  const paTbl=document.getElementById('pa-analogy');
+  paTbl.innerHTML=`<thead><tr><th>PA 公理</th><th>物理类比</th><th>计算机类比</th><th>芯片/硬件类比</th></tr></thead><tbody>${
+    D.analogyPA.map(r=>`<tr><td style="font-weight:700;white-space:nowrap">${r.pa}</td><td>${r.physics}</td><td>${r.comp}</td><td>${r.chip}</td></tr>`).join('')
+  }</tbody>`;
+
+  // Concept analogy
+  const conTbl=document.getElementById('concept-analogy');
+  conTbl.innerHTML=`<thead><tr><th>概念</th><th>在 T 层含义</th><th>在 PA 层含义</th><th>在 G 层含义</th></tr></thead><tbody>${
+    D.analogyConcepts.map(r=>`<tr><td style="font-weight:700">${r.concept}</td><td>${r.T}</td><td>${r.PA}</td><td>${r.G}</td></tr>`).join('')
+  }</tbody>`;
+}
+
+// ============================================================
+// VIEW: TOOLS
+// ============================================================
+function initTools(){
+  const steps=[
+    {q:'Step 1：能追溯到 PA 公理吗？',a:'否 → 不属于 G 层主干（考虑放入应用层配置或业务规则）。是 → 继续 Step 2。'},
+    {q:'Step 2：是理想条件还是工程补强？',a:'理想条件下成立 → G0–G7（根据追溯到的 PA 选择对应 G）。只在非理想环境下需要 → G8。（判断标准：删掉它，G0–G7 的逻辑结构是否坍塌？）'},
+    {q:'Step 3：能用参数维度取值表达吗？',a:'是 → 优先通过维度取值表达（如 cognitive_demand、interrupt_tolerance 的具体值）。否 → 写成 G 层要求，附带 PA 根源标注。'},
+    {q:'Step 4：检查是否已有覆盖',a:'查对应 G 目标下是否已有等价要求。若有 → 补充说明而非新增。若无 → 新增，格式：[简称] 正文 → PA根源：PAx → 次目标：Gy → 层级。'},
+  ];
+  const stepsEl=document.getElementById('tool-steps');stepsEl.innerHTML='';
+  steps.forEach((s,i)=>{
+    const div=document.createElement('div');div.className='tool-step';
+    div.innerHTML=`<div class="tool-step-num">${i+1}</div><div class="tool-step-body"><h4>${s.q}</h4><p>${s.a}</p></div>`;
+    stepsEl.appendChild(div);
+  });
+
+  const q6=[
+    {n:'Q1',q:'事件能到达主体吗？',check:'canInject(e, Bᵢ)',basis:'effective_external_threshold vs priority(e)',pa:'PA7'},
+    {n:'Q2',q:'到达后会被看到吗？',check:'通知优先级 ≥ effective_threshold',basis:'baseline_attention_policy + 场修正',pa:'PA7'},
+    {n:'Q3',q:'是否会打断当前活动？',check:'canWakeup(e, Bᵢ) = true',basis:'wakeup_external_threshold vs semantic_class',pa:'PA4'},
+    {n:'Q4',q:'若响应，输出什么动作？',check:'allowedActions 中包含该动作',basis:'角色权限 + medium/bandwidth/mobility 约束',pa:'PA9'},
+    {n:'Q5',q:'动作如何写回状态？',check:'R_B^apply 中的写回路径',basis:'control_delta → V_Bᵢ；action_event → R_A^apply',pa:'PA5'},
+    {n:'Q6',q:'写回后，下次何时演化？',check:'next_wakeup 更新值',basis:'schedule_update?.next_wakeup || defaultNextWakeup(mode)',pa:'PA4'},
+  ];
+  const q6El=document.getElementById('q6-grid');q6El.innerHTML='';
+  q6.forEach(q=>{
+    const div=document.createElement('div');div.className='q6-card';
+    div.innerHTML=`<div class="qnum">${q.n}</div><h4>${q.q}</h4>
+      <p style="margin-bottom:4px"><b>检查：</b>${q.check}</p>
+      <p style="margin-bottom:4px"><b>依据：</b>${q.basis}</p>
+      <p><span class="tag tag-PA" style="font-size:.7rem">${q.pa}</span></p>`;
+    q6El.appendChild(div);
+  });
+
+  const vGrid=document.getElementById('values-grid');vGrid.innerHTML='';
+  D.values.forEach(v=>{
+    const div=document.createElement('div');div.className='card';
+    div.innerHTML=`<h3 style="color:var(--accent)">${v.name}</h3>
+      <p style="font-size:.8rem;color:var(--danger);margin:4px 0">❌ 没有：${v.problem}</p>
+      <p style="font-size:.8rem;color:var(--ok)">✅ 有了：${v.solution}</p>`;
+    vGrid.appendChild(div);
+  });
+}
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+const viewInits={
+  panorama:initPanorama,
+  't-layer':initTLayer,
+  'pa-layer':initPALayer,
+  'g-layer':initGLayer,
+  derivation:initDerivation,
+  analogy:initAnalogy,
+  tools:initTools,
+};
+const initialized={};
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const view=btn.dataset.view;
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    const panel=document.getElementById('view-'+view.replace(/-/g,'-'));
+    if(panel)panel.classList.add('active');
+    if(!initialized[view]&&viewInits[view]){viewInits[view]();initialized[view]=true;}
+  });
+});
+
+// Initialize first view
+initPanorama();initialized['panorama']=true;
+</script>
+</body>
+</html>

@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>T-PA-G · 有向关系图谱</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;background:#02020c;font-family:'Noto Sans SC',sans-serif;}
+.topbar{
+  position:fixed;top:0;left:0;right:0;height:46px;z-index:200;
+  background:rgba(2,2,12,.92);backdrop-filter:blur(14px);
+  border-bottom:1px solid rgba(255,255,255,.06);
+  display:flex;align-items:center;padding:0 16px;gap:10px;
+}
+.tb-title{font-size:.85rem;font-weight:700;color:#dedad6;}
+.tb-tag{font-size:.65rem;color:#7e7c82;padding:2px 7px;border-radius:8px;background:rgba(255,255,255,.06);}
+.tb-hint{font-size:.67rem;color:#4e4c52;margin-left:auto;}
+.tb-back{font-size:.7rem;padding:4px 10px;border:1px solid rgba(255,255,255,.12);border-radius:5px;color:#7e7c82;text-decoration:none;transition:.15s;}
+.tb-back:hover{color:#dedad6;border-color:rgba(255,255,255,.3);}
+.canvas{position:fixed;top:46px;left:0;right:0;bottom:0;}
+svg{width:100%;height:100%;}
+
+/* 图例 */
+.legend{
+  position:fixed;bottom:12px;left:50%;transform:translateX(-50%);
+  display:flex;gap:16px;align-items:center;
+  background:rgba(4,4,16,.9);backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.08);border-radius:8px;
+  padding:6px 14px;font-size:.65rem;color:#7e7c82;
+}
+.lg-item{display:flex;align-items:center;gap:5px;}
+.lg-line{height:2px;width:20px;border-radius:1px;}
+
+/* ════════════════════════════════
+   信息面板（右侧固定，可固定/滚动）
+════════════════════════════════ */
+.info-panel{
+  position:fixed;top:56px;right:12px;
+  width:340px;
+  background:rgba(6,6,18,.95);backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,.09);border-radius:12px;
+  display:none;flex-direction:column;
+  max-height:calc(100vh - 72px);
+  z-index:50;overflow:hidden;
+  transition:border-color .2s;
+}
+.info-panel.show{display:flex;}
+.info-panel.pinned{border-color:rgba(155,110,217,.5);box-shadow:0 0 18px rgba(155,110,217,.15);}
+
+/* 粘性头部 */
+.ip-header{
+  padding:13px 14px 10px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+  flex-shrink:0;
+}
+.ip-header-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;}
+.ip-id-badge{font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:3px;color:#fff;}
+.ip-layer-name{font-size:.62rem;color:#7e7c82;}
+.ip-pin-hint{
+  margin-left:auto;font-size:.6rem;color:#4e4c52;white-space:nowrap;
+  border:1px solid rgba(255,255,255,.08);border-radius:4px;padding:1px 6px;
+  transition:color .2s,border-color .2s;
+}
+.info-panel.pinned .ip-pin-hint{color:#c4a8f5;border-color:rgba(155,110,217,.4);}
+.ip-name-zh{font-size:.92rem;font-weight:700;margin-bottom:2px;}
+.ip-name-en{font-size:.72rem;font-style:italic;color:#7e7c82;}
+
+/* 可滚动内容区 */
+.ip-body{
+  overflow-y:auto;padding:12px 14px;
+  display:flex;flex-direction:column;gap:10px;
+  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent;
+}
+.ip-body::-webkit-scrollbar{width:3px;}
+.ip-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:2px;}
+
+/* 面板内各节 */
+.ip-sec{display:flex;flex-direction:column;gap:5px;}
+.ip-sec-label{font-size:.6rem;font-weight:700;letter-spacing:.08em;color:#4e4c52;text-transform:uppercase;}
+.ip-text{font-size:.76rem;color:rgba(222,218,214,.8);line-height:1.65;white-space:pre-wrap;}
+.ip-bullets{list-style:none;display:flex;flex-direction:column;gap:3px;}
+.ip-bullets li{font-size:.74rem;color:rgba(222,218,214,.72);padding-left:11px;position:relative;line-height:1.5;}
+.ip-bullets li::before{content:'·';position:absolute;left:1px;}
+.ip-viol{font-size:.73rem;padding:8px 10px;border-radius:5px;background:rgba(200,100,70,.07);border-left:2px solid rgba(200,100,70,.38);color:rgba(200,155,120,.85);line-height:1.6;white-space:pre-wrap;}
+.ip-mono{font-family:'JetBrains Mono',monospace;font-size:.7rem;background:rgba(0,0,8,.6);border:1px solid rgba(255,255,255,.07);border-radius:5px;padding:8px 10px;line-height:1.6;white-space:pre-wrap;overflow-x:auto;color:rgba(200,220,240,.8);}
+.ip-analogy{display:grid;grid-template-columns:48px 1fr;gap:3px 8px;font-size:.72rem;}
+.ip-analogy-domain{color:#4e4c52;font-weight:500;padding-top:2px;}
+.ip-analogy-text{color:rgba(222,218,214,.7);line-height:1.5;}
+.ip-divider{height:1px;background:rgba(255,255,255,.06);}
+
+/* G 子要求 */
+.ip-sr{padding:7px 9px;border-radius:5px;background:rgba(72,170,118,.04);border:1px solid rgba(72,170,118,.1);margin-bottom:4px;}
+.ip-sr-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;}
+.ip-sr-id{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;color:#48aa76;white-space:nowrap;}
+.ip-sr-lv{font-size:.57rem;padding:1px 4px;border-radius:2px;white-space:nowrap;}
+.lv-h{background:rgba(200,114,74,.2);color:#e89070;} .lv-i{background:rgba(212,144,74,.2);color:#e8b070;}
+.lv-b{background:rgba(200,74,74,.2);color:#e88080;} .lv-c{background:rgba(90,138,171,.2);color:#90c0e0;}
+.lv-e{background:rgba(90,138,171,.15);color:#80afd0;} .lv-s{background:rgba(72,170,118,.2);color:#7ecfa0;}
+.ip-sr-title{font-size:.74rem;font-weight:600;color:#dedad6;}
+.ip-sr-desc{font-size:.71rem;color:#7e7c82;line-height:1.55;}
+
+/* 相关边 */
+.ip-edge{font-size:.7rem;color:rgba(222,218,214,.65);padding:4px 8px;border-radius:4px;
+  margin-bottom:3px;border-left:2px solid rgba(255,255,255,.12);line-height:1.5;}
+.ip-serves{display:flex;gap:4px;flex-wrap:wrap;}
+.ip-sc{font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:2px;background:rgba(74,158,221,.22);color:#8ccaf0;}
+.ip-gpc{font-size:.6rem;font-weight:600;padding:1px 5px;border-radius:2px;background:rgba(155,110,217,.2);color:#caa8f5;border:1px solid rgba(155,110,217,.2);}
+.ip-gtc{font-size:.58rem;padding:1px 4px;border-radius:2px;background:rgba(74,158,221,.12);color:rgba(140,202,240,.65);}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <span class="tb-title">T-PA-G · 有向关系图谱</span>
+  <span class="tb-tag">全节点可见 · 悬停激活链路</span>
+  <span class="tb-hint">悬停节点→高亮链路；点击节点→固定右侧详情面板（可滚动）；再次点击或 Esc→解除</span>
+  <a class="tb-back" href="index.html">← 三列视图</a>
+</header>
+
+<div class="canvas">
+  <svg id="G" viewBox="0 0 1340 660" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <filter id="sh" x="-20%" y="-40%" width="140%" height="180%">
+        <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="rgba(0,0,0,.55)" flood-opacity="1"/>
+      </filter>
+      <filter id="sh-T" x="-30%" y="-60%" width="160%" height="220%">
+        <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#4a9edd" flood-opacity=".6"/>
+        <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="rgba(0,0,0,.5)" flood-opacity="1"/>
+      </filter>
+      <filter id="sh-PA" x="-30%" y="-60%" width="160%" height="220%">
+        <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#9b6ed9" flood-opacity=".6"/>
+        <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="rgba(0,0,0,.5)" flood-opacity="1"/>
+      </filter>
+      <filter id="sh-G" x="-30%" y="-60%" width="160%" height="220%">
+        <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#48aa76" flood-opacity=".6"/>
+        <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="rgba(0,0,0,.5)" flood-opacity="1"/>
+      </filter>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5"
+              markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+        <path d="M 0 1 L 9 5 L 0 9 Z" fill="context-stroke"/>
+      </marker>
+    </defs>
+
+    <!-- 背景区域 -->
+    <rect x="0" y="0" width="246" height="660" fill="rgba(4,16,34,.7)"/>
+    <defs>
+      <linearGradient id="grad-T" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#4a9edd" stop-opacity=".12"/><stop offset="100%" stop-color="#4a9edd" stop-opacity="0"/></linearGradient>
+      <linearGradient id="grad-PA" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#9b6ed9" stop-opacity=".1"/><stop offset="50%" stop-color="#9b6ed9" stop-opacity=".06"/><stop offset="100%" stop-color="#9b6ed9" stop-opacity="0"/></linearGradient>
+      <linearGradient id="grad-G" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#48aa76" stop-opacity=".08"/><stop offset="100%" stop-color="#48aa76" stop-opacity="0"/></linearGradient>
+    </defs>
+    <rect x="0" y="0" width="246" height="660" fill="url(#grad-T)" opacity=".3"/>
+    <rect x="248" y="0" width="274" height="660" fill="rgba(10,5,30,.6)"/>
+    <rect x="248" y="0" width="274" height="660" fill="url(#grad-PA)" opacity=".4"/>
+    <rect x="524" y="0" width="816" height="660" fill="rgba(3,16,12,.65)"/>
+    <rect x="524" y="0" width="816" height="660" fill="url(#grad-G)" opacity=".4"/>
+    <line x1="246" y1="0" x2="246" y2="660" stroke="rgba(74,158,221,.12)" stroke-width="1"/>
+    <line x1="522" y1="0" x2="522" y2="660" stroke="rgba(155,110,217,.12)" stroke-width="1"/>
+    <line x1="810" y1="30" x2="810" y2="640" stroke="rgba(72,170,118,.08)" stroke-width="1" stroke-dasharray="4,5"/>
+
+    <!-- 水印 -->
+    <text x="10" y="210" font-size="160" font-weight="900" fill="#4a9edd" opacity=".04" font-family="system-ui" letter-spacing="-8">T</text>
+    <text x="255" y="240" font-size="130" font-weight="900" fill="#9b6ed9" opacity=".04" font-family="system-ui" letter-spacing="-6">PA</text>
+    <text x="528" y="200" font-size="120" font-weight="900" fill="#48aa76" opacity=".035" font-family="system-ui" letter-spacing="-5">G</text>
+
+    <!-- 区域标题 -->
+    <text x="123" y="20" text-anchor="middle" font-size="9.5" font-weight="700" fill="#4a9edd" opacity=".7" letter-spacing=".08em" font-family="system-ui">T 层 · 本质目标</text>
+    <text x="385" y="20" text-anchor="middle" font-size="9.5" font-weight="700" fill="#9b6ed9" opacity=".7" letter-spacing=".08em" font-family="system-ui">PA 层 · 抽象公理</text>
+    <text x="665" y="20" text-anchor="middle" font-size="9.5" font-weight="700" fill="#48aa76" opacity=".7" letter-spacing=".08em" font-family="system-ui">G 层（左：核心串行链）</text>
+    <text x="997" y="20" text-anchor="middle" font-size="9.5" font-weight="700" fill="#48aa76" opacity=".7" letter-spacing=".08em" font-family="system-ui">G 层（右：并行+特化+工程）</text>
+
+    <g id="edge-g"></g>
+    <g id="label-g"></g>
+    <g id="node-g"></g>
+  </svg>
+</div>
+
+<!-- 图例 -->
+<div class="legend">
+  <div class="lg-item"><div class="lg-line" style="background:rgba(74,158,221,.7)"></div><span>T→PA 公理化</span></div>
+  <div class="lg-item"><div class="lg-line" style="background:rgba(155,110,217,.7)"></div><span>PA→G 具体化</span></div>
+  <div class="lg-item"><div class="lg-line" style="background:rgba(74,158,221,.5);border-top:1px dashed rgba(74,158,221,.6)"></div><span>T 层内依赖</span></div>
+  <div class="lg-item"><div class="lg-line" style="background:rgba(155,110,217,.5);border-top:1px dashed rgba(155,110,217,.6)"></div><span>PA 互补对</span></div>
+  <div class="lg-item"><div class="lg-line" style="background:rgba(72,170,118,.5);border-top:1px dashed rgba(72,170,118,.6)"></div><span>G 层内依赖</span></div>
+</div>
+
+<!-- 详情面板 -->
+<div class="info-panel" id="info-panel">
+  <div class="ip-header">
+    <div class="ip-header-row">
+      <span id="ip-id" class="ip-id-badge"></span>
+      <span id="ip-layer" class="ip-layer-name"></span>
+      <span class="ip-pin-hint" id="ip-pin-hint">点击节点固定</span>
+    </div>
+    <div id="ip-zh" class="ip-name-zh"></div>
+    <div id="ip-en" class="ip-name-en"></div>
+  </div>
+  <div class="ip-body" id="ip-body"></div>
+</div>
+
+<script src="data.js"></script>
+<script>
+/* ══════════════════════════════════════════════════
+   节点定义
+══════════════════════════════════════════════════ */
+const NW=195, NH=36;
+const NODE_DEFS=[
+  {id:'T1',layer:'T',x:26,y:48},{id:'T2',layer:'T',x:26,y:174},{id:'T3',layer:'T',x:26,y:302},
+  {id:'T4',layer:'T',x:26,y:430},{id:'T5',layer:'T',x:26,y:534},
+  {id:'PA1',layer:'PA',x:258,y:36},{id:'PA2',layer:'PA',x:258,y:106},{id:'PA3',layer:'PA',x:258,y:176},
+  {id:'PA4',layer:'PA',x:258,y:246},{id:'PA5',layer:'PA',x:258,y:316},{id:'PA6',layer:'PA',x:258,y:386},
+  {id:'PA7',layer:'PA',x:258,y:456},{id:'PA8',layer:'PA',x:258,y:526},{id:'PA9',layer:'PA',x:258,y:596},
+  {id:'G0',layer:'G',x:530,y:36},{id:'G1',layer:'G',x:530,y:148},{id:'G2',layer:'G',x:530,y:260},
+  {id:'G3',layer:'G',x:530,y:372},{id:'G4',layer:'G',x:530,y:484},
+  {id:'G5',layer:'G',x:820,y:36},{id:'G6',layer:'G',x:820,y:170},{id:'G7',layer:'G',x:820,y:322},{id:'G8',layer:'G',x:820,y:474}
+];
+const NODE_MAP={};NODE_DEFS.forEach(n=>NODE_MAP[n.id]=n);
+function cx(n){return n.x+NW/2;} function cy(n){return n.y+NH/2;}
+const COL={T:'#4a9edd',PA:'#9b6ed9',G:'#48aa76'};
+const COL2={T:'#8ccaf0',PA:'#caa8f5',G:'#7ecfa0'};
+const LAYER_NAMES={T:'T 层 · 本质目标层',PA:'PA 层 · 抽象公理层',G:'G 层 · 当前系统目标层'};
+
+/* ══════════════════════════════════════════════════
+   连线中文标签（与 GRAPH_EDGES 的 label 配对）
+══════════════════════════════════════════════════ */
+const ZH_LABELS={
+  'T1→T2':'T2 以 T1 为前提',
+  'T2→T3':'T3 以 T1+T2 为前提',
+  'T3→T4':'T4 以 T3 为前提',
+  'T1→T5':'T5 并行依赖 T1',
+  'T1→PA1':'T1 需要 PA1（结构可定义）',
+  'T1→PA5':'T1 需要 PA5（状态可追溯）',
+  'T2→PA2':'T2 需要 PA2（无界破坏合法域）',
+  'T2→PA5':'T2 需要 PA5（多写者导致矛盾）',
+  'T2→PA6':'T2 需要 PA6（永挂效应致不确定）',
+  'T3→PA2':'T3 需要 PA2（无界增长有限停机）',
+  'T3→PA3':'T3 需要 PA3（无恢复则耗尽永停）',
+  'T3→PA4':'T3 需要 PA4（无再进入则永沉默）',
+  'T3→PA6':'T3 需要 PA6（效应积压耗尽资源）',
+  'T4→PA8':'T4 需要 PA8（空转须可检测逃离）',
+  'T5→PA1':'T5 需要 PA1（耦合需主体可区分）',
+  'T5→PA7':'T5 需要 PA7（观察侧：信息可达）',
+  'T5→PA9':'T5 需要 PA9（行动侧：行动有效）',
+  'PA2→PA3':'资源稳定互补（PA2 防爆炸）',
+  'PA3→PA2':'资源稳定互补（PA3 防耗尽）',
+  'PA6→PA7':'效应生命周期互补（PA6 防永挂）',
+  'PA7→PA6':'效应生命周期互补（PA7 防永失）',
+  'PA7→PA9':'耦合双向互补（PA7 观察侧）',
+  'PA9→PA7':'耦合双向互补（PA9 行动侧）',
+  'PA4→PA8':'运行活性互补（PA4 存在性）',
+  'PA8→PA4':'运行活性互补（PA8 质量性）',
+  'PA1→G0':'PA1 具体化 → G0 本体结构',
+  'PA1→G2':'PA1 具体化 → G2 单步演化',
+  'PA2→G1':'PA2 具体化 → G1 有界不变量',
+  'PA2→G3':'PA2 具体化 → G3 记忆/通知有界',
+  'PA2→G8':'PA2 工程增强 → G8',
+  'PA3→G3':'PA3 具体化 → G3 能量恢复路径',
+  'PA3→G8':'PA3 工程增强 → G8',
+  'PA4→G2':'PA4 具体化 → G2 四阶段演化',
+  'PA4→G3':'PA4 具体化 → G3 调度链不断',
+  'PA4→G7':'PA4 具体化 → G7 中断恢复',
+  'PA5→G0':'PA5 具体化 → G0 真源位置表',
+  'PA5→G1':'PA5 具体化 → G1 写隔离/唯一真源',
+  'PA5→G6':'PA5 具体化 → G6 事件日志',
+  'PA5→G8':'PA5 工程增强 → G8',
+  'PA6→G1':'PA6 具体化 → G1 通知终局',
+  'PA6→G3':'PA6 具体化 → G3 TTL 清理',
+  'PA6→G5':'PA6 具体化 → G5 closeCondition',
+  'PA7→G2':'PA7 具体化 → G2 assemble 可见通知',
+  'PA7→G5':'PA7 具体化 → G5 感知正确性',
+  'PA8→G4':'PA8 具体化 → G4 P(s)+追踪+逃离',
+  'PA8→G8':'PA8 工程增强 → G8 N-tick 超时',
+  'PA9→G0':'PA9 具体化 → G0 共享世界结构',
+  'PA9→G5':'PA9 具体化 → G5 语义有效耦合',
+  'G0→G1':'G1 依赖 G0（无存在性则无合法性）',
+  'G1→G2':'G2 依赖 G1（无合法边界则无完备演化）',
+  'G2→G3':'G3 依赖 G2（无单步则无持续演化）',
+  'G3→G4':'G4 依赖 G3（先活着才谈有无意义）',
+  'G0→G5':'G5 依赖 G0（语义耦合需本体结构）',
+  'G2→G5':'G5 依赖 G2（行动路由需 emit/apply）',
+  'G0→G6':'G6 依赖 G0（审计需存储归属定义）',
+  'G1→G6':'G6 依赖 G1（写权明确才能可信审计）',
+  'G3→G7':'G7 依赖 G3（认知连续需系统稳定）',
+  'G6→G7':'G7 依赖 G6（记忆恢复需事件日志）'
+};
+
+/* ══════════════════════════════════════════════════
+   T 层英文内容（含违反/类比）
+══════════════════════════════════════════════════ */
+const T_DETAIL={
+  T1:{def:'The system must be formally describable.',reqs:['Distinguishable agents and environment','Describable states and evolution rules','Describable interactions (complete interfaces)'],viol:'若违反 → 根本得不到一个系统（不是"跑得不好"而是"连系统都不存在"）'},
+  T2:{def:'The system must be in a legal state at every moment.',reqs:['State values in legal range (e.g. energy∈[0,100])','Write boundaries enforced: result / author / scope','Single source of truth + complete interfaces'],viol:'若违反 → 系统进入非法状态，后续所有演化结果不可信'},
+  T3:{def:'The system must evolve indefinitely under ideal conditions.',reqs:['Resources replenished (PA3 Recoverability)','Accumulations bounded (PA2 Boundedness)','Scheduling never breaks (PA4 Rescheduling)','Evolution has no dead states (PA1 full-definition)'],viol:'若违反 → 永久沉默、资源耗尽停机、内部积压溢出'},
+  T4:{def:'Must not converge to meaningless absorbing states or pathological loops.',reqs:['No unexpected absorbing states or meaningless fixed points','Escape mechanism exists for pathological trajectories (PA8)','P(s) progress projection is defined and tracked'],viol:'若违反 → 假活性、假稳态、形式运行但语义冻结'},
+  T5:{def:'Agents must genuinely affect and be affected by the environment.',reqs:['Legal events reach agents (PA7, observation side)','Legal actions change the world (PA9, action side)','Both sides required — one alone is not true coupling'],viol:'若违反 → 各自自循环的孤立状态机集合，名义上多主体而非真实耦合'}
+};
+
+/* ══════════════════════════════════════════════════
+   PA 层英文关键约束
+══════════════════════════════════════════════════ */
+const PA_KEYS={
+  PA1:['状态空间良定义：S = S_agent ⊕ S_world ⊕ S_interaction','演化算子对任意合法状态全定义（无死状态）'],
+  PA2:['覆盖所有可能无界增长量：energy / memory / notification_count / obligation_count 等','识别发生在设计阶段，不要求运行时动态判定'],
+  PA3:['与 PA2 互补：PA2 防上溢，PA3 防下溢，合起来保证 [R_min, B_R] 长时健康区间','恢复路径必须在实际可达轨迹中存在（不只是理论上存在）'],
+  PA4:['时间/事件/内部调度触发，三者满足其一即可','只要求"有机会演化不被永久剥夺"，不要求每次机会有意义（PA8 的职责）'],
+  PA5:['"durable"=变更具有因果可追溯性的状态分量（非临时缓存或传输中间值）','其他组件只能通过权威者的 apply 路径间接影响，不能直接修改'],
+  PA6:['覆盖所有 effect 类型：Notification / Request / Task / Obligation / ContextClose','各类型终态不同但须显式定义：consumed / expired / satisfied / applied 等'],
+  PA7:['不要求"立刻到达"，要求"有限时间内必然到达"','hazard/emergency 类信息须突破所有注意力门槛——不允许被过滤'],
+  PA8:['P(s) 的定义来源于系统设计层，而非运行时主观认定"有意义"','用 Prob[escape] > 0（非零概率逃离）而非确定性逃离——Borel-Cantelli 保证最终退出'],
+  PA9:['PA7 保证观察侧（信息到达），PA9 保证行动侧（净效果），两者合起来才是 T5','缺 PA7：盲目执行器；缺 PA9：纯被动接收器']
+};
+
+const LV_CLASS={'硬要求':'lv-h','硬不变量':'lv-i','禁止项':'lv-b','判准':'lv-c','工程增强':'lv-e','设计原则':'lv-s','声明性约束':'lv-s'};
+
+/* ══════════════════════════════════════════════════
+   边反向表
+══════════════════════════════════════════════════ */
+const T2PA={},PA2T={},PA2G={},G2PA={};
+(TPAG_DATA.edgesT2PA||[]).forEach(e=>{
+  (T2PA[e.from]=T2PA[e.from]||[]).push(e.to);
+  (PA2T[e.to]=PA2T[e.to]||[]).push(e.from);
+});
+(TPAG_DATA.edgesPA2G||[]).forEach(e=>{
+  (PA2G[e.from]=PA2G[e.from]||[]).push(e.to);
+  (G2PA[e.to]=G2PA[e.to]||[]).push(e.from);
+});
+
+/* ══════════════════════════════════════════════════
+   SVG 工具
+══════════════════════════════════════════════════ */
+const NS='http://www.w3.org/2000/svg';
+function el(tag,attrs){const e=document.createElementNS(NS,tag);for(const[k,v]of Object.entries(attrs||{}))e.setAttribute(k,v);return e;}
+function txt(s,attrs){const t=el('text',attrs);t.textContent=s;return t;}
+
+/* ══════════════════════════════════════════════════
+   渲染节点
+══════════════════════════════════════════════════ */
+function renderNodes(){
+  const g=document.getElementById('node-g');
+  NODE_DEFS.forEach(n=>{
+    const BW=n.layer==='PA'?34:28;
+    const col=COL[n.layer],col2=COL2[n.layer];
+    const nodeData=(TPAG_DATA.nodes[n.layer]||[]).find(x=>x.id===n.id);
+    const zhName=nodeData?nodeData.label.replace(/^[A-Z0-9]+ /,''):n.id;
+    const enName=typeof EN_NAMES!=='undefined'?EN_NAMES[n.id]:'';
+    const zhShort=zhName.length>10?zhName.slice(0,9)+'…':zhName;
+    const enShort=enName.length>22?enName.slice(0,21)+'…':enName;
+    const gg=el('g',{'class':'node-g','data-id':n.id,'data-layer':n.layer,'data-cx':cx(n),'data-cy':cy(n)});
+    gg.style.cursor='pointer';
+    gg.appendChild(el('rect',{x:n.x,y:n.y,width:NW,height:NH,rx:5,fill:col+'14',stroke:col+'55','stroke-width':1.5,filter:'url(#sh)','class':'node-rect'}));
+    gg.appendChild(el('rect',{x:n.x,y:n.y,width:BW,height:NH,rx:5,fill:col+'80','class':'node-badge'}));
+    gg.appendChild(el('rect',{x:n.x+BW/2,y:n.y,width:BW/2,height:NH,fill:col+'80'}));
+    gg.appendChild(txt(n.id,{x:n.x+BW/2,y:n.y+NH/2+1,'text-anchor':'middle','dominant-baseline':'middle',fill:'#fff','font-size':BW>30?8:9,'font-weight':700,'font-family':'JetBrains Mono, monospace'}));
+    gg.appendChild(txt(zhShort,{x:n.x+BW+7,y:n.y+14,fill:col2,'font-size':10.5,'font-weight':700,'font-family':'Noto Sans SC, sans-serif'}));
+    gg.appendChild(txt(enShort,{x:n.x+BW+7,y:n.y+27,fill:col+'88','font-size':8,'font-style':'italic','font-family':'system-ui, sans-serif'}));
+    gg.addEventListener('mouseenter',()=>onNodeEnter(n.id));
+    gg.addEventListener('mouseleave',()=>onNodeLeave(n.id));
+    gg.addEventListener('click',e=>{e.stopPropagation();onNodeClick(n.id);});
+    g.appendChild(gg);
+  });
+}
+
+/* ══════════════════════════════════════════════════
+   边路径计算（与原版相同）
+══════════════════════════════════════════════════ */
+function edgePath(e){
+  const f=NODE_MAP[e.from],t=NODE_MAP[e.to];if(!f||!t)return null;
+  const fcx=cx(f),fcy=cy(f),tcx=cx(t),tcy=cy(t);
+  let d,lx=0,ly=0;
+  if(e.type==='T2PA'||e.type==='PA2G'){
+    const x1=f.x+NW+2,y1=fcy,x2=t.x-7,y2=tcy,mx=(x1+x2)/2;
+    d=`M${x1} ${y1} C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`;lx=mx;ly=(y1+y2)/2;
+  }else if(e.type==='T_int'){
+    const x1=f.x-2,y1=fcy,x2=t.x-2,y2=tcy,off=Math.abs(y2-y1)>200?-22:-13;
+    d=`M${x1} ${y1} C${x1+off} ${y1} ${x2+off} ${y2} ${x2} ${y2}`;lx=x1+off-8;ly=(y1+y2)/2;
+  }else if(e.type==='PA_pair'){
+    if(tcy>fcy){const x1=f.x+NW+2,y1=fcy,x2=t.x+NW+2,y2=tcy,off=Math.min(28,Math.abs(y2-y1)*.35);d=`M${x1} ${y1} C${x1+off} ${y1} ${x2+off} ${y2} ${x2} ${y2}`;lx=x1+off+6;ly=(y1+y2)/2;}
+    else{const x1=f.x-2,y1=fcy,x2=t.x-2,y2=tcy,off=Math.min(28,Math.abs(y2-y1)*.35);d=`M${x1} ${y1} C${x1-off} ${y1} ${x2-off} ${y2} ${x2} ${y2}`;lx=x1-off-6;ly=(y1+y2)/2;}
+  }else if(e.type==='G_int'){
+    const fR=fcx>800,tR=tcx>800;
+    if(!fR&&!tR||fR&&tR){const y1=f.y+NH+2,y2=t.y-2,my=(y1+y2)/2;d=`M${fcx} ${y1} C${fcx} ${my} ${tcx} ${my} ${tcx} ${y2}`;lx=(fcx+tcx)/2;ly=my;}
+    else if(!fR&&tR){const x1=f.x+NW+2,y1=fcy,x2=t.x-7,y2=tcy,mx=(x1+x2)/2;d=`M${x1} ${y1} C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`;lx=mx;ly=(y1+y2)/2;}
+    else{const x1=f.x-2,y1=fcy,x2=t.x+NW+2,y2=tcy,mx=(x1+x2)/2;d=`M${x1} ${y1} C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`;lx=mx;ly=(y1+y2)/2;}
+  }
+  return d?{d,lx,ly}:null;
+}
+
+/* ══════════════════════════════════════════════════
+   渲染边（中英双语标签）
+══════════════════════════════════════════════════ */
+const TYPE_COLOR={T_int:'rgba(74,158,221,A)',T2PA:'rgba(74,158,221,A)',PA_pair:'rgba(155,110,217,A)',PA2G:'rgba(155,110,217,A)',G_int:'rgba(72,170,118,A)'};
+const TYPE_DASH={T_int:'5,4',PA_pair:'4,4',G_int:'5,4'};
+function edgeColor(type,a){return(TYPE_COLOR[type]||'rgba(200,200,200,A)').replace('A',a);}
+const EDGE_ELS={},LABEL_ELS={};
+
+function renderEdges(){
+  const eg=document.getElementById('edge-g');
+  const lg=document.getElementById('label-g');
+  const EDGES=typeof GRAPH_EDGES!=='undefined'?GRAPH_EDGES:[];
+  EDGES.forEach(e=>{
+    const p=edgePath(e);if(!p)return;
+    const key=e.from+'→'+e.to;
+    const dash=TYPE_DASH[e.type];
+    const path=el('path',{d:p.d,fill:'none',stroke:edgeColor(e.type,dash?.12:.14),'stroke-width':dash?1:1.3,'marker-end':'url(#arr)','class':'epath'});
+    if(dash)path.setAttribute('stroke-dasharray',dash);
+    path.setAttribute('data-key',key);
+    eg.appendChild(path);
+    EDGE_ELS[key]=path;
+
+    // 双语标签
+    const zhLbl=ZH_LABELS[key]||'';
+    const enLbl=e.label||'';
+    const enShort=enLbl.length>48?enLbl.slice(0,47)+'…':enLbl;
+    const tw=Math.min(Math.max(zhLbl.length*9.5,enShort.length*4.5)+16,260);
+
+    const lg2=el('g',{'class':'elabel','data-key':key});
+    lg2.setAttribute('transform',`translate(${p.lx},${p.ly})`);
+    lg2.style.display='none';
+
+    const lb=el('rect',{x:-tw/2,y:-13,width:tw,height:26,rx:3,fill:'rgba(5,5,16,.95)',stroke:'rgba(255,255,255,.14)','stroke-width':.5});
+    const lt1=el('text',{'text-anchor':'middle',y:-1,fill:'rgba(220,216,210,.9)','font-size':9,'font-family':'Noto Sans SC, sans-serif'});
+    lt1.textContent=zhLbl;
+    const lt2=el('text',{'text-anchor':'middle',y:12,fill:'rgba(180,176,172,.6)','font-size':7.5,'font-style':'italic','font-family':'system-ui, sans-serif'});
+    lt2.textContent=enShort;
+
+    lg2.appendChild(lb);lg2.appendChild(lt1);lg2.appendChild(lt2);
+    lg.appendChild(lg2);
+    LABEL_ELS[key]=lg2;
+  });
+}
+
+/* ══════════════════════════════════════════════════
+   固定/悬停逻辑
+══════════════════════════════════════════════════ */
+const EDGES_LIST=typeof GRAPH_EDGES!=='undefined'?GRAPH_EDGES:[];
+let pinnedId=null;
+
+function getNeighbors(id){
+  const s=new Set([id]);
+  EDGES_LIST.forEach(e=>{if(e.from===id)s.add(e.to);if(e.to===id)s.add(e.from);});
+  return s;
+}
+function getConnEdges(id){
+  const s=new Set();
+  EDGES_LIST.forEach(e=>{if(e.from===id||e.to===id)s.add(e.from+'→'+e.to);});
+  return s;
+}
+
+const SCALE=1.1;
+function scaleNode(el,cxv,cyv,s){
+  if(s===1){el.removeAttribute('transform');return;}
+  el.setAttribute('transform',`translate(${cxv*(1-s)} ${cyv*(1-s)}) scale(${s})`);
+}
+
+function activate(id){
+  const nb=getNeighbors(id),ce=getConnEdges(id);
+  document.querySelectorAll('.node-g').forEach(g=>{
+    const gid=g.getAttribute('data-id'),layer=g.getAttribute('data-layer');
+    if(gid===id){scaleNode(g,parseFloat(g.getAttribute('data-cx')),parseFloat(g.getAttribute('data-cy')),SCALE);g.querySelector('.node-rect').setAttribute('filter',`url(#sh-${layer})`);g.querySelector('.node-rect').setAttribute('stroke',COL[layer]+'cc');g.style.opacity='1';}
+    else if(nb.has(gid)){g.querySelector('.node-rect').setAttribute('stroke',COL[layer]+'88');g.style.opacity='1';}
+    else{g.style.opacity='0.12';}
+  });
+  Object.entries(EDGE_ELS).forEach(([key,p])=>{
+    if(ce.has(key)){const e=EDGES_LIST.find(x=>x.from+'→'+x.to===key);p.setAttribute('stroke',edgeColor(e?.type||'T2PA',.88));p.setAttribute('stroke-width','2.2');p.removeAttribute('stroke-dasharray');p.setAttribute('marker-end','url(#arr)');}
+    else{p.setAttribute('stroke','rgba(255,255,255,.03)');p.setAttribute('stroke-width','1');}
+  });
+  Object.entries(LABEL_ELS).forEach(([key,lg])=>{lg.style.display=ce.has(key)?'block':'none';});
+}
+
+function deactivate(){
+  document.querySelectorAll('.node-g').forEach(g=>{
+    scaleNode(g,0,0,1);
+    const layer=g.getAttribute('data-layer');
+    g.querySelector('.node-rect').setAttribute('filter','url(#sh)');
+    g.querySelector('.node-rect').setAttribute('stroke',COL[layer]+'55');
+    g.style.opacity='1';
+  });
+  Object.entries(EDGE_ELS).forEach(([key,p])=>{
+    const e=EDGES_LIST.find(x=>x.from+'→'+x.to===key);
+    const dash=TYPE_DASH[e?.type];
+    p.setAttribute('stroke',edgeColor(e?.type||'T2PA',dash?.12:.14));
+    p.setAttribute('stroke-width',dash?'1':'1.3');
+    if(dash)p.setAttribute('stroke-dasharray',dash);else p.removeAttribute('stroke-dasharray');
+  });
+  Object.values(LABEL_ELS).forEach(lg=>lg.style.display='none');
+  document.getElementById('info-panel').classList.remove('show');
+  document.getElementById('info-panel').classList.remove('pinned');
+}
+
+function onNodeEnter(id){if(pinnedId&&pinnedId!==id)return;activate(id);showInfoPanel(id);}
+function onNodeLeave(id){if(pinnedId)return;deactivate();}
+
+function onNodeClick(id){
+  if(pinnedId===id){
+    // 解除固定
+    pinnedId=null;
+    document.getElementById('info-panel').classList.remove('pinned');
+    document.getElementById('ip-pin-hint').textContent='点击节点固定';
+  }else{
+    // 固定到此节点
+    pinnedId=id;
+    activate(id);
+    showInfoPanel(id);
+    document.getElementById('info-panel').classList.add('show','pinned');
+    document.getElementById('ip-pin-hint').textContent='📌 已固定 · 再次点击解除';
+  }
+}
+
+// 点击 SVG 空白区域：解除固定
+document.getElementById('G').addEventListener('click',e=>{
+  if(e.target===e.currentTarget||e.target.tagName==='rect'&&e.target.getAttribute('fill')&&!e.target.classList.contains('node-rect')&&!e.target.classList.contains('node-badge')){
+    if(pinnedId){pinnedId=null;deactivate();}
+  }
+});
+
+// Esc 解除固定
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&pinnedId){pinnedId=null;deactivate();}});
+
+// 面板区点击不传播（防止解除固定）
+document.getElementById('info-panel').addEventListener('click',e=>e.stopPropagation());
+
+/* ══════════════════════════════════════════════════
+   面板内容数据（按元逻辑说明书风格）
+══════════════════════════════════════════════════ */
+const NODE_Q={   // 回答的问题
+  T1:'系统能不能被描述出来？',
+  T2:'系统能不能始终保持在有意义的状态？',
+  T3:'系统能不能永远运行下去（在理想条件下）？',
+  T4:'系统的运行有没有语义进展——还是只是在空转？',
+  T5:'主体与环境之间有没有真实的双向交互？',
+  PA1:'系统结构是否清晰地区分了「谁在行动」和「谁被作用」？',
+  PA2:'所有可能无限增长的状态量，有没有上限？',
+  PA3:'关键资源耗尽后，能不能回来？',
+  PA4:'任意时刻，系统还能再次被触发演化吗？',
+  PA5:'每个状态分量，只有一个负责写它的权威者吗？',
+  PA6:'每一个「待处理效应」，最终都会有一个明确结局吗？',
+  PA7:'有权接收某信息的主体，一定能收到它吗？',
+  PA8:'系统是真的在推进，还是只是在原地空转？',
+  PA9:'每个主体既能感知环境，也能真实地影响环境吗？'
+};
+
+const NODE_WHY={  // 为什么必要（来自元逻辑说明书）
+  T1:'如果连系统有什么、状态是什么、如何演化都无法表达，那么「运行」「正确性」「稳定性」这些概念都失去着落。',
+  T2:'即使系统在运行，若状态自相矛盾，后续所有演化结果都不可信。T2 失效不是「跑得慢」，而是「跑出来的结果无意义」。',
+  T3:'一个在有限时间内必然停机的系统，只是短程过程，不是长期自治系统。',
+  T4:'一个系统可以满足 T3（一直在运行）但违反 T4——永远在几个无意义状态间循环。这种「假活性」比停机更难发现、更难诊断。',
+  T5:'若主体与环境之间没有真实耦合，「多智能体—世界系统」只是多个孤立状态机加一个空壳环境。',
+  PA1:'T1 要求系统可形式化→必须有可区分的主体/环境结构。T5 要求真实耦合→必须知道「谁在行动、谁被作用」。PA1 是这两个目标共同的基础。',
+  PA2:'T2 要求状态在合法域内→无界状态必然越界。T3 要求无限演化→无界增长在有限时间内导致停机。PA2 与 PA3 互补：PA2 防上溢，PA3 防下溢，两者合起来才能保证资源的长时健康。',
+  PA3:'PA2 只保证有上界，但不保证资源不单调下降到耗尽。PA3 专门保证「从任意低状态都能恢复」——没有它，任何消耗型动作都趋向永久停机。恢复路径必须在实际轨迹中可达，不能只在理论上存在。',
+  PA4:'T3 要求持续演化→系统不能永久失去演化机会。PA4 只保证「有机会演化」，不要求「机会有意义」——那是 PA8 的职责。PA4 满足但 PA8 缺失时：agent 被不断唤醒，但每次都在空转。',
+  PA5:'T1 要求可形式化→状态必须有唯一权威来源才能追溯。T2 要求合法性→多写者竞争导致状态污染和矛盾。PA5 是所有「写隔离」要求的公理来源。',
+  PA6:'T2 要求合法性→永久悬挂的效应使系统状态不确定。T3 要求持续演化→无终局的效应无限积压，最终耗尽资源。PA6 统一覆盖所有类型的 effect：通知、义务、事件、动作、消息。',
+  PA7:'T5 要求有效耦合（观察侧）→若合法应接收信息的主体永远接收不到，「主体受环境影响」这件事就不成立。PA7 不要求「立刻到达」，但要求「不能永远到不了」。',
+  PA8:'T4 要求开放演化→必须能定义「什么是进展」、检测「是否在进展」、逃离「无进展循环」。PA8 区分了「真正在推进」（P(s) 净变化）和「形式上在运行」（P(s) 不变）。',
+  PA9:'T5 要求有效耦合，包含两个方向：观察侧（由 PA7 保证）+ 行动侧（由 PA9 保证）。缺 PA7：盲目执行器；缺 PA9：纯被动接收器——两者缺一，T5 都不完整。'
+};
+
+const NODE_CONSQ={  // 若缺失 / 违反后果（一句话）
+  T1:'不会得到「一个运行得差的系统」，而是根本没有系统。',
+  T2:'系统进入非法状态，后续演化结果不可信。',
+  T3:'永久沉默、资源耗尽停机、内部积压溢出、有限时间终止。',
+  T4:'假活性、假稳态、病态循环、形式运行但语义冻结。',
+  T5:'各自自循环的 agent 集合；名义上多主体，而非真实相互作用系统。',
+  PA1:'无法定义 agent、world、耦合；行为方向性无法定义；整个体系失去概念基础。',
+  PA2:'资源枯竭、内部积压爆炸、被历史数据拖死、有限时间内丧失演化能力。',
+  PA3:'任何消耗型动作都趋向永久停机；即使有上界，系统也会在到达下界后卡死。',
+  PA4:'系统即使当前状态合法，也可能永远沉默，变成静态系统。',
+  PA5:'耦合边界消失；行为因果不可追踪；审计无法进行；系统变成不可验证的黑箱互写。',
+  PA6:'系统被历史效应拖死；无法区分哪些效应已完成；通知/义务无限积压。',
+  PA7:'主体与环境解耦；重要事件永远无法影响相应 agent；系统退化为各自自循环的状态机。',
+  PA8:'固定点僵死、周期性空转、假活性——不断触发但无任何语义进展。',
+  PA9:'agent 退化为纯被动接收器（只观察）或盲目执行器（只行动）；真实的多主体—世界系统不存在。'
+};
+
+const G_WHAT={  // G 层各节点核心作用（智能体语境一句话）
+  G0:'整个系统的骨架定义。粒子是谁、本体变量在哪里、谁有权写它——这些必须在设计时钉死，不能靠「约定俗成」。',
+  G1:'所有运行时「硬规则」的集合。无论在哪个演化步骤，这些不变量必须全部成立。违反任何一条，系统进入非法状态，所有输出不可信。',
+  G2:'每步 agent 演化必须走完四个阶段：assemble（组装输入）→ evolve（产生输出）→ emit（发射事件）→ apply（写回状态）。跳过任何一个，演化就不完整。',
+  G3:'系统「长期活着」的保障。调度链不能断、能量必须有恢复路径、记忆和通知必须有界——少任何一条，系统在有限时间内必然停摆。',
+  G4:'系统「活着有意义」的保障。定义什么叫真实进展（P(s) 净变化），追踪上次进展时间，在进展停滞时自动触发逃离——防止义务循环死锁或 LLM 语义空转。',
+  G5:'agent 与世界真实耦合的落地规范。Field（外部交互环境）和 Activity（当前行为方式）必须分开建模，三者共同决定：感知什么、能做什么、如何调度。',
+  G6:'所有状态变更的可信记录体系。任何 durable 变更先写 Event Log 再物化，LLM 必须等 ActionReceipt 确认后才记录「动作成功」——防止记忆与现实分裂（Split-Brain）。',
+  G7:'LLM-based agent 专属的认知连续性保障。memory 是真状态不是缓存；中断时保存 resume_token；返回时校验并恢复上下文。缺失时：agent 每次对话都像「从零开始」。',
+  G8:'在真实计算机环境（故障/延迟/并发/重启）中实现 G0–G7 的工程增强层。删掉 G8 后 G0–G7 的逻辑不坍塌，但实现层会出现 busy-loop、split-brain、时钟偏差等工程病态。'
+};
+
+/* ══════════════════════════════════════════════════
+   详情面板（元逻辑说明书风格）
+══════════════════════════════════════════════════ */
+function showInfoPanel(id){
+  const panel=document.getElementById('info-panel');
+  try{
+  const layer=NODE_MAP[id]?.layer;
+  const nodeData=(TPAG_DATA.nodes[layer]||[]).find(n=>n.id===id);
+  if(!nodeData)return;
+
+  const col=COL[layer];
+  document.getElementById('ip-id').textContent=id;
+  document.getElementById('ip-id').style.background=col+'88';
+  document.getElementById('ip-layer').textContent=LAYER_NAMES[layer]||'';
+  const ipZh=document.getElementById('ip-zh');
+  ipZh.textContent=nodeData.label||id;
+  ipZh.style.color=COL2[layer];
+  document.getElementById('ip-en').textContent=typeof EN_NAMES!=='undefined'?EN_NAMES[id]||'':'';
+
+  const body=document.getElementById('ip-body');
+  body.innerHTML='';
+
+  // ── 工具函数 ──
+  function sec(emoji,label){
+    const d=document.createElement('div');d.className='ip-sec';
+    const l=document.createElement('div');l.className='ip-sec-label';
+    l.textContent=(emoji?emoji+' ':'')+label;
+    d.appendChild(l);return d;
+  }
+  function div(){const d=document.createElement('div');d.className='ip-divider';body.appendChild(d);}
+  function txt(text,cls){const d=document.createElement('div');d.className=cls||'ip-text';d.textContent=text;return d;}
+  function viol(text){return txt(text,'ip-viol');}
+  function analogyGrid(list){
+    const g=document.createElement('div');g.className='ip-analogy';
+    list.forEach(a=>{
+      const dm=document.createElement('div');dm.className='ip-analogy-domain';dm.textContent=a.domain;
+      const tx=document.createElement('div');tx.className='ip-analogy-text';tx.textContent=a.text;
+      g.appendChild(dm);g.appendChild(tx);
+    });return g;
+  }
+  function bulletList(items,col){
+    const ul=document.createElement('ul');ul.className='ip-bullets';
+    items.forEach(r=>{const li=document.createElement('li');li.textContent=r;if(col)li.style.setProperty('--bul',col);ul.appendChild(li);});
+    return ul;
+  }
+
+  /* ══ T 层 ══ */
+  if(layer==='T'){
+    // 回答的问题
+    const q=NODE_Q[id];
+    if(q){
+      const sq=sec('','回答的问题');
+      const qbox=document.createElement('div');
+      qbox.style.cssText='font-size:.82rem;font-weight:700;color:'+COL2[layer]+';padding:6px 10px;border-radius:5px;background:'+col+'14;border-left:3px solid '+col+'66;line-height:1.6;';
+      qbox.textContent=q;sq.appendChild(qbox);body.appendChild(sq);
+    }
+    // 定义
+    div();
+    const sd=sec('📖','定义');sd.appendChild(txt(nodeData.short));body.appendChild(sd);
+
+    // 最小要求
+    const td=T_DETAIL[id]||{};
+    if(td.reqs?.length){
+      div();const sr2=sec('✅','最小要求');sr2.appendChild(bulletList(td.reqs));body.appendChild(sr2);
+    }
+
+    // 为什么必要
+    const why=NODE_WHY[id];
+    if(why){div();const sw=sec('💡','为什么必要');sw.appendChild(txt(why));body.appendChild(sw);}
+
+    // 违反后果
+    const cq=NODE_CONSQ[id];
+    if(cq){div();const sc=sec('🔴','违反后果');sc.appendChild(viol(cq));body.appendChild(sc);}
+
+    // 违反案例
+    if(nodeData.violation){
+      div();const sv=sec('⚠','违反案例（智能体场景）');sv.appendChild(viol(nodeData.violation));body.appendChild(sv);
+    }
+
+    // 跨域类比
+    if(nodeData.analogies?.length){
+      div();const sa=sec('🔗','跨域类比');sa.appendChild(analogyGrid(nodeData.analogies));body.appendChild(sa);
+    }
+  }
+
+  /* ══ PA 层 ══ */
+  else if(layer==='PA'){
+    // 服务的 T 目标（chip）
+    const tS=[...new Set([...(PA2T[id]||[])])];
+    if(tS.length){
+      const s0=sec('','服务的 T 目标');
+      const chips=document.createElement('div');chips.className='ip-serves';
+      tS.forEach(t=>{const c=document.createElement('span');c.className='ip-sc';c.textContent=t;chips.appendChild(c);});
+      s0.appendChild(chips);body.appendChild(s0);
+    }
+
+    // 回答的问题
+    const q=NODE_Q[id];
+    if(q){
+      div();
+      const sq=sec('','回答的问题');
+      const qbox=document.createElement('div');
+      qbox.style.cssText='font-size:.82rem;font-weight:700;color:'+COL2[layer]+';padding:6px 10px;border-radius:5px;background:'+col+'14;border-left:3px solid '+col+'66;line-height:1.6;';
+      qbox.textContent=q;sq.appendChild(qbox);body.appendChild(sq);
+    }
+
+    // 公理核心表述
+    div();
+    const s1=sec('📖','公理核心表述');s1.appendChild(txt(nodeData.short));body.appendChild(s1);
+
+    // 关键约束
+    const keys=PA_KEYS[id]||[];
+    if(keys.length){div();const s2=sec('✅','关键约束');s2.appendChild(bulletList(keys));body.appendChild(s2);}
+
+    // 为什么必要
+    const why=NODE_WHY[id];
+    if(why){div();const sw=sec('💡','为什么 T 层需要这条公理');sw.appendChild(txt(why));body.appendChild(sw);}
+
+    // 违反后果
+    const cq=NODE_CONSQ[id];
+    if(cq){div();const sc=sec('🔴','若缺失 / 违反后果');sc.appendChild(viol(cq));body.appendChild(sc);}
+
+    // 违反案例
+    if(nodeData.violation){
+      div();const sv=sec('⚠','违反案例（智能体场景）');sv.appendChild(viol(nodeData.violation));body.appendChild(sv);
+    }
+
+    // 数学表达
+    if(nodeData.math){
+      div();const sm=sec('∑','数学表达');sm.appendChild(txt(nodeData.math,'ip-mono'));body.appendChild(sm);
+    }
+
+    // 跨域类比
+    if(nodeData.analogies?.length){
+      div();const sa=sec('🔗','跨域类比');sa.appendChild(analogyGrid(nodeData.analogies));body.appendChild(sa);
+    }
+  }
+
+  /* ══ G 层 ══ */
+  else if(layer==='G'){
+    // PA 根源 + T 目标 chip
+    const metaDiv=document.createElement('div');
+    metaDiv.style.cssText='display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;';
+    (nodeData.paRoots||[]).forEach(p=>{const c=document.createElement('span');c.className='ip-gpc';c.textContent=p;metaDiv.appendChild(c);});
+    (nodeData.tTargets||[]).forEach(t=>{const c=document.createElement('span');c.className='ip-gtc';c.textContent='→'+t;metaDiv.appendChild(c);});
+    body.appendChild(metaDiv);
+
+    // 核心作用（智能体语境一句话）
+    const gw=G_WHAT[id];
+    if(gw){
+      const sq=sec('','核心作用');
+      const qbox=document.createElement('div');
+      qbox.style.cssText='font-size:.82rem;font-weight:600;color:'+COL2[layer]+';padding:6px 10px;border-radius:5px;background:'+col+'12;border-left:3px solid '+col+'55;line-height:1.6;';
+      qbox.textContent=gw;sq.appendChild(qbox);body.appendChild(sq);
+    }
+
+    // 详细说明（第一段）
+    if(nodeData.desc){
+      div();const s1=sec('📖','目标说明');s1.appendChild(txt(nodeData.desc.split('\n')[0]));body.appendChild(s1);
+    }
+
+    // 具体子要求（完整展开）
+    if(nodeData.subReqs?.length){
+      div();const s2=sec('📋',`具体子要求（${nodeData.subReqs.length} 条）`);
+      nodeData.subReqs.forEach(sr=>{
+        const card=document.createElement('div');card.className='ip-sr';
+        const h=document.createElement('div');h.className='ip-sr-head';
+        const sid=document.createElement('span');sid.className='ip-sr-id';sid.textContent=sr.id;
+        const slv=document.createElement('span');slv.className='ip-sr-lv '+(LV_CLASS[sr.level]||'lv-s');slv.textContent=sr.level;
+        const stt=document.createElement('span');stt.className='ip-sr-title';stt.textContent=sr.title;
+        h.appendChild(sid);h.appendChild(slv);h.appendChild(stt);card.appendChild(h);
+        if(sr.desc){const sd=document.createElement('div');sd.className='ip-sr-desc';sd.textContent=sr.desc;card.appendChild(sd);}
+        s2.appendChild(card);
+      });
+      body.appendChild(s2);
+    }
+  }
+
+  // 相关连线逻辑
+  div();
+  const sEdge=sec('🔀','相关连线逻辑');
+  EDGES_LIST.filter(e=>e.from===id||e.to===id).forEach(e=>{
+    const other=e.from===id?e.to:e.from;
+    const dir=e.from===id?'→':'←';
+    const key=e.from+'→'+e.to;
+    const zhL=ZH_LABELS[key]||'';
+    const edgeDiv=document.createElement('div');edgeDiv.className='ip-edge';
+    edgeDiv.style.borderLeftColor=col+'55';
+    edgeDiv.innerHTML=`<strong style="color:${COL2[layer]}">${dir} ${other}</strong>&nbsp;<span style="color:#7e7c82;font-size:.69rem;display:block;margin-top:1px">${zhL}</span>`;
+    sEdge.appendChild(edgeDiv);
+  });
+  body.appendChild(sEdge);
+
+  panel.classList.add('show');
+  }catch(err){
+    // 安全兜底：即使内容渲染出错，也确保面板可见
+    console.error('[showInfoPanel] error for',id,err);
+    panel.classList.add('show');
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   初始化
+══════════════════════════════════════════════════ */
+renderNodes();
+renderEdges();
+requestAnimationFrame(()=>requestAnimationFrame(()=>{}));
+</script>
+</body>
+</html>

@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>T-PA-G · Three-Layer System (EN)</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --h:50px;
+  --T:#4a9edd;  --T2:#8ccaf0; --Tbg:#030e1c; --Tbg2:#051829; --Tbdr:rgba(74,158,221,.2);
+  --PA:#9b6ed9; --PA2:#caa8f5;--PAbg:#08041d;--PAbg2:#0e072a;--PAbdr:rgba(155,110,217,.2);
+  --G:#48aa76;  --G2:#7ecfa0; --Gbg:#021510; --Gbg2:#04201a; --Gbdr:rgba(72,170,118,.2);
+  --txt:#dedad6; --mut:#7e7c82; --mut2:#4a484e;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;font-family:'Inter','Noto Sans SC',sans-serif;color:var(--txt);}
+body{background:#020208;}
+
+.bar{
+  position:fixed;top:0;left:0;right:0;height:var(--h);z-index:200;
+  background:rgba(2,2,8,.9);backdrop-filter:blur(14px);
+  border-bottom:1px solid rgba(255,255,255,.06);
+  display:flex;align-items:center;padding:0 18px;gap:10px;flex-wrap:wrap;
+}
+.bar-title{font-size:.88rem;font-weight:700;white-space:nowrap;}
+.bar-tag{font-size:.66rem;color:var(--mut);padding:2px 7px;border-radius:8px;background:rgba(255,255,255,.05);}
+.bar-hint{margin-left:auto;font-size:.7rem;color:var(--mut2);}
+.bar-link{font-size:.7rem;padding:4px 10px;border-radius:5px;border:1px solid;cursor:pointer;transition:.15s;text-decoration:none;}
+.bar-link-ZH{border-color:var(--Tbdr);color:var(--T);background:rgba(74,158,221,.08);}
+.bar-link-ZH:hover{background:rgba(74,158,221,.18);}
+.bar-link-GR{border-color:var(--PAbdr);color:var(--PA);background:rgba(155,110,217,.08);}
+.bar-link-GR:hover{background:rgba(155,110,217,.18);}
+
+#conn-svg{position:fixed;top:var(--h);left:0;width:100%;height:calc(100% - var(--h));pointer-events:none;z-index:10;}
+
+.diagram{position:fixed;top:var(--h);left:0;right:0;bottom:0;display:flex;}
+.col{overflow-y:auto;overflow-x:hidden;position:relative;padding:16px 12px 24px;
+  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent;}
+.col::-webkit-scrollbar{width:3px;}
+.col::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
+.col-T{flex:0 0 22%;min-width:190px;background:linear-gradient(168deg,var(--Tbg) 0%,var(--Tbg2) 100%);border-right:1px solid rgba(74,158,221,.12);}
+.col-PA{flex:0 0 30%;min-width:240px;background:linear-gradient(168deg,var(--PAbg) 0%,var(--PAbg2) 100%);border-right:1px solid rgba(155,110,217,.12);}
+.col-G{flex:1;min-width:320px;background:linear-gradient(168deg,var(--Gbg) 0%,var(--Gbg2) 100%);}
+
+.wm{position:absolute;bottom:10px;right:-5px;font-size:clamp(90px,14vw,160px);font-weight:900;pointer-events:none;user-select:none;line-height:1;letter-spacing:-.06em;opacity:.04;}
+.col-T .wm{color:var(--T);}
+.col-PA .wm{color:var(--PA);}
+.col-G .wm{color:var(--G);}
+
+.col-head{margin-bottom:14px;padding-bottom:11px;border-bottom:1px solid rgba(255,255,255,.07);}
+.col-badge{display:inline-block;font-size:.6rem;font-weight:700;letter-spacing:.08em;padding:2px 8px;border-radius:3px;margin-bottom:5px;}
+.cb-T{background:var(--T);color:#010c18;} .cb-PA{background:var(--PA);color:#04011a;} .cb-G{background:var(--G);color:#01100a;}
+.col-name{display:block;font-size:.95rem;font-weight:700;margin-bottom:3px;}
+.col-T .col-name{color:var(--T2);} .col-PA .col-name{color:var(--PA2);} .col-G .col-name{color:var(--G2);}
+.col-desc{font-size:.7rem;color:var(--mut);line-height:1.55;}
+
+.node-card{border-radius:8px;padding:12px 13px;margin-bottom:9px;display:flex;flex-direction:column;gap:7px;cursor:pointer;position:relative;transition:border-color .15s,background .15s,opacity .2s;}
+.node-card.dimmed{opacity:.2!important;pointer-events:none;}
+.nid-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.nid{font-size:.67rem;font-weight:700;padding:2px 8px;border-radius:3px;letter-spacing:.03em;flex-shrink:0;}
+.nid-T{background:var(--T);color:#010c18;} .nid-PA{background:var(--PA);color:#04011a;} .nid-G{background:var(--G);color:#01100a;}
+.ntitle-en{font-size:.9rem;font-weight:700;}
+.col-T .ntitle-en{color:var(--T2);} .col-PA .ntitle-en{color:var(--PA2);} .col-G .ntitle-en{color:var(--G2);}
+.ntitle-zh{font-size:.7rem;color:var(--mut);font-style:italic;}
+.node-def{font-size:.78rem;color:var(--txt);line-height:1.6;}
+.reqs{list-style:none;display:flex;flex-direction:column;gap:3px;}
+.reqs li{font-size:.7rem;color:rgba(222,218,214,.7);padding-left:11px;position:relative;line-height:1.45;}
+.reqs li::before{content:'·';position:absolute;left:1px;}
+.col-T .reqs li::before{color:var(--T);} .col-PA .reqs li::before{color:var(--PA);}
+.viol{font-size:.69rem;padding:4px 8px;border-radius:4px;background:rgba(200,110,74,.07);border-left:2px solid rgba(200,110,74,.35);color:rgba(200,155,120,.8);line-height:1.4;}
+.dbtn{display:inline-flex;align-items:center;gap:4px;font-size:.65rem;color:var(--mut);background:none;border:1px solid rgba(255,255,255,.09);border-radius:3px;padding:3px 8px;transition:.15s;align-self:flex-start;cursor:pointer;}
+.dbtn:hover{border-color:var(--mut);color:var(--txt);}
+
+.t-card{background:rgba(74,158,221,.05);border:1px solid var(--Tbdr);}
+.t-card:hover,.t-card.lit{background:rgba(74,158,221,.12)!important;border-color:var(--T)!important;}
+.pa-card{background:rgba(155,110,217,.05);border:1px solid var(--PAbdr);}
+.pa-card:hover,.pa-card.lit{background:rgba(155,110,217,.12)!important;border-color:var(--PA)!important;}
+.g-card{background:rgba(72,170,118,.05);border:1px solid var(--Gbdr);}
+.g-card:hover,.g-card.lit{background:rgba(72,170,118,.12)!important;border-color:var(--G)!important;}
+
+.serves{display:flex;gap:3px;flex-wrap:wrap;}
+.sc{font-size:.58rem;font-weight:700;padding:1px 5px;border-radius:2px;background:rgba(74,158,221,.22);color:var(--T2);}
+.sc.sub{background:rgba(74,158,221,.1);color:rgba(140,202,240,.55);}
+
+.pg-label{font-size:.58rem;font-weight:700;letter-spacing:.08em;color:rgba(155,110,217,.65);padding:2px 8px;border-left:2px solid rgba(155,110,217,.3);margin-bottom:6px;margin-top:14px;}
+.pg-label:first-child{margin-top:0;}
+
+.pairs-wrap{border-top:1px solid rgba(155,110,217,.15);margin-top:16px;padding-top:14px;}
+.pairs-title{font-size:.6rem;font-weight:700;letter-spacing:.07em;color:rgba(155,110,217,.6);margin-bottom:10px;}
+.pair-card{background:rgba(155,110,217,.05);border:1px solid rgba(155,110,217,.15);border-radius:6px;padding:9px 11px;margin-bottom:8px;cursor:pointer;transition:border-color .15s,background .15s;}
+.pair-card:hover{border-color:var(--PA);background:rgba(155,110,217,.12);}
+.pair-top{display:flex;align-items:center;gap:5px;margin-bottom:4px;}
+.pair-ids{display:flex;align-items:center;gap:3px;font-size:.65rem;font-weight:700;}
+.pair-arrow{color:var(--PA);font-size:.85rem;}
+.pair-name{font-size:.72rem;font-weight:700;color:var(--PA2);margin-bottom:4px;}
+.pair-tagline{font-size:.67rem;color:var(--mut);line-height:1.4;}
+
+.g-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;align-items:start;}
+@media(max-width:1100px){.g-grid{grid-template-columns:1fr;}}
+.g-meta{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:2px;}
+.gpc{font-size:.59rem;font-weight:600;padding:1px 5px;border-radius:2px;background:rgba(155,110,217,.18);color:var(--PA2);border:1px solid rgba(155,110,217,.2);}
+.gtc{font-size:.57rem;padding:1px 4px;border-radius:2px;background:rgba(74,158,221,.12);color:rgba(140,202,240,.6);}
+
+.srs{display:flex;flex-direction:column;gap:5px;}
+.sr{padding:6px 9px;border-radius:5px;background:rgba(72,170,118,.04);border:1px solid rgba(72,170,118,.1);}
+.sr-r1{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:3px;}
+.sr-id{font-family:'JetBrains Mono','Courier New',monospace;font-size:.59rem;font-weight:600;color:var(--G);white-space:nowrap;}
+.lv{font-size:.55rem;padding:1px 4px;border-radius:2px;white-space:nowrap;}
+.lv-h{background:rgba(200,114,74,.2);color:#e89070;} .lv-i{background:rgba(212,144,74,.2);color:#e8b070;}
+.lv-b{background:rgba(200,74,74,.2);color:#e88080;} .lv-c{background:rgba(90,138,171,.2);color:#90c0e0;}
+.lv-e{background:rgba(90,138,171,.15);color:#80afd0;} .lv-s{background:rgba(72,170,118,.2);color:var(--G2);}
+.sr-title{font-size:.73rem;font-weight:600;color:var(--txt);}
+.sr-desc{font-size:.68rem;color:var(--mut);line-height:1.5;}
+.more-btn{font-size:.67rem;color:var(--mut);background:none;border:1px dashed rgba(72,170,118,.2);border-radius:4px;padding:4px 10px;width:100%;cursor:pointer;transition:.15s;}
+.more-btn:hover{border-color:var(--G);color:var(--G);}
+
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(6px);z-index:400;display:none;align-items:center;justify-content:center;padding:16px;}
+.ov.open{display:flex;}
+.modal{background:#0f0f18;border:1px solid rgba(255,255,255,.1);border-radius:12px;width:560px;max-width:96vw;max-height:84vh;overflow:hidden;display:flex;flex-direction:column;}
+.mhd{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.mbadge{font-size:.67rem;font-weight:700;padding:3px 8px;border-radius:3px;}
+.mtitle{font-size:.95rem;font-weight:700;}
+.mbody{padding:16px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
+.mlbl{font-size:.62rem;font-weight:700;letter-spacing:.08em;color:var(--mut);text-transform:uppercase;margin-bottom:3px;}
+.mtext{font-size:.82rem;line-height:1.7;white-space:pre-wrap;}
+.mmono{font-family:'Courier New',monospace;font-size:.75rem;line-height:1.65;background:#07070e;border-radius:5px;padding:10px;border:1px solid rgba(255,255,255,.07);white-space:pre-wrap;overflow-x:auto;}
+.mviol{background:rgba(200,90,70,.07);border-left:3px solid rgba(200,90,70,.45);border-radius:0 5px 5px 0;padding:10px 13px;font-size:.8rem;line-height:1.7;white-space:pre-wrap;}
+.mana{display:grid;grid-template-columns:72px 1fr;gap:4px 10px;font-size:.8rem;}
+.mdom{color:var(--mut);font-weight:500;align-self:start;padding-top:2px;}
+.mdiv{height:1px;background:rgba(255,255,255,.06);}
+.mft{padding:10px 18px;border-top:1px solid rgba(255,255,255,.07);display:flex;justify-content:flex-end;}
+.mcls{padding:5px 16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--txt);border-radius:5px;cursor:pointer;transition:.15s;}
+.mcls:hover{background:rgba(255,255,255,.14);}
+
+@media(max-width:900px){html,body{overflow:auto;}.diagram{position:static;flex-direction:column;}.col{min-height:300px;overflow:visible;}.col-T,.col-PA{border-right:none;border-bottom:1px solid rgba(255,255,255,.07);}#conn-svg{display:none;}}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <span class="bar-title">T-PA-G · Three-Layer Goal–Axiom–Requirement System v2.2</span>
+  <span class="bar-tag">Three-Column View · EN</span>
+  <span class="bar-hint">Hover node to highlight connections · Click for details</span>
+  <a href="index.html" class="bar-link bar-link-ZH">中文版</a>
+  <a href="viz-graph.html" class="bar-link bar-link-GR">⬡ Graph View</a>
+</header>
+
+<svg id="conn-svg"></svg>
+
+<div class="diagram" id="diagram">
+  <div class="col col-T" id="col-T">
+    <div class="wm">T</div>
+    <div class="col-head">
+      <span class="col-badge cb-T">T-Layer · 5 Goals</span>
+      <span class="col-name">Essential Goal Layer</span>
+      <span class="col-desc">Holds universally for any "agent–world" multi-agent system, regardless of implementation. Violating T doesn't mean the system "runs poorly" — it means the system is no longer the type we are discussing. Serial dependency: T1→T2→T3→T4, T5 runs in parallel.</span>
+    </div>
+    <div id="t-nodes"></div>
+  </div>
+
+  <div class="col col-PA" id="col-PA">
+    <div class="wm">PA</div>
+    <div class="col-head">
+      <span class="col-badge cb-PA">PA-Layer · 9 Axioms</span>
+      <span class="col-name">Abstract Axiom Layer</span>
+      <span class="col-desc">The structural bridge between T and G. More concrete than T (has structural meaning), more abstract than G (implementation-agnostic). For each PA it can be proven: if not satisfied, some T goal will inevitably fail under some condition.</span>
+    </div>
+    <div id="pa-nodes"></div>
+    <div class="pairs-wrap">
+      <div class="pairs-title">⇄ FOUR COMPLEMENTARY PAIRS (each side insufficient alone)</div>
+      <div id="pa-pairs"></div>
+    </div>
+  </div>
+
+  <div class="col col-G" id="col-G">
+    <div class="wm">G</div>
+    <div class="col-head">
+      <span class="col-badge cb-G">G-Layer · G0–G8 + Sub-Requirements</span>
+      <span class="col-name">Current System Goal Layer</span>
+      <span class="col-desc">Concretization of PA axioms within the particle system (world/agents/meta). Every G requirement traces back to at least one PA axiom and one T goal. Serial core chain: G0→G1→G2→G3→G4; G5/G6 parallel; G7 LLM-specific; G8 engineering hardening.</span>
+    </div>
+    <div class="g-grid" id="g-nodes"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov">
+  <div class="modal">
+    <div class="mhd">
+      <span id="m-badge" class="mbadge"></span>
+      <span id="m-title" class="mtitle"></span>
+    </div>
+    <div id="m-body" class="mbody"></div>
+    <div class="mft"><button class="mcls" id="m-cls">Close</button></div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+const TOPBAR_H = 50;
+
+/* ─── English content ─── */
+const T_EN = {
+  T1:{
+    def:'The system must be formally describable.',
+    reqs:['Distinguishable agents and environment','Describable states and evolution rules','Describable interactions (interfaces)'],
+    viol:'If violated → No system at all (not "poorly running")'
+  },
+  T2:{
+    def:'The system must be in a legal state at every moment.',
+    reqs:['State values in legal range (e.g. energy∈[0,100])','Write boundaries enforced: result / author / scope','Single source of truth + complete interfaces'],
+    viol:'If violated → All subsequent evolution produces untrustworthy results'
+  },
+  T3:{
+    def:'The system must evolve indefinitely under ideal conditions.',
+    reqs:['Resources are replenished (PA3 Recoverability)','Accumulations are bounded (PA2 Boundedness)','Scheduling never breaks (PA4 Rescheduling)','Evolution has no dead states (PA1 full-definition)'],
+    viol:'If violated → Permanent silence, resource exhaustion, or buffer overflow'
+  },
+  T4:{
+    def:'The system must not converge to meaningless absorbing states or pathological loops.',
+    reqs:['No unexpected absorbing states or meaningless fixed points','Escape mechanism exists for pathological trajectories (PA8)','P(s) progress projection is defined and tracked'],
+    viol:'If violated → Spurious liveness, fake stability, semantically frozen'
+  },
+  T5:{
+    def:'Agents must genuinely affect and be affected by the environment.',
+    reqs:['Legal events reach relevant agents (PA7, observation side)','Legal actions change the world (PA9, action side)','Both sides required — one alone is not true coupling'],
+    viol:'If violated → Isolated state machines; nominal multi-agent, not real interaction'
+  }
+};
+
+const PA_GROUPS = [
+  {label:'Definition Group (mainly T1)',ids:['PA1','PA5']},
+  {label:'Boundary Group (T2/T3)',ids:['PA2','PA6']},
+  {label:'Survival Group (mainly T3)',ids:['PA3','PA4']},
+  {label:'Progress Group (solely T4)',ids:['PA8']},
+  {label:'Coupling Group (mainly T5)',ids:['PA7','PA9']}
+];
+
+const T2PA_MAP = {};
+const PA2T_MAP = {};
+const PA2G_MAP = {};
+const G2PA_MAP = {};
+(TPAG_DATA.edgesT2PA||[]).forEach(e=>{
+  (T2PA_MAP[e.from]=T2PA_MAP[e.from]||[]).push(e.to);
+  (PA2T_MAP[e.to]=PA2T_MAP[e.to]||[]).push(e.from);
+});
+(TPAG_DATA.edgesPA2G||[]).forEach(e=>{
+  (PA2G_MAP[e.from]=PA2G_MAP[e.from]||[]).push(e.to);
+  (G2PA_MAP[e.to]=G2PA_MAP[e.to]||[]).push(e.from);
+});
+
+const PA_KEYS_EN = {
+  PA1:['State space well-defined: S = S_agent ⊕ S_world ⊕ S_interaction','Evolution operator is total-defined for all legal states (no dead states)'],
+  PA2:['Covers all unbounded quantities: energy, memory, notification_count, obligation_count…','Identification at design time — no runtime dynamic determination required'],
+  PA3:['Complementary to PA2: PA2 prevents overflow, PA3 prevents depletion','Recovery path must exist in the actual reachable trajectory (not just theoretically)'],
+  PA4:['Three trigger types satisfy the condition: time-driven / event-driven / internal scheduling','Requires only "opportunity is not lost forever" — not "each opportunity is meaningful" (PA8\'s job)'],
+  PA5:['"durable" = state whose changes are causally traceable (not temporary cache or transit value)','Other components can influence only via the authoritative writer\'s apply path'],
+  PA6:['Covers all effect types: Notification / Request / Task / Obligation / ContextClose','Terminal states vary by type but must be explicitly defined: consumed / expired / satisfied…'],
+  PA7:['Does not require "immediate delivery" — requires "delivery within finite time"','hazard/emergency class must bypass all attention thresholds — no filtering allowed'],
+  PA8:['P(s) definition comes from the system design layer, not runtime subjective judgment','Uses Prob[escape] > 0 (non-zero probability) — Borel-Cantelli ensures eventual exit'],
+  PA9:['PA7 guarantees observation side (info arrives), PA9 guarantees action side (net effect)','Missing PA7: blind executor; Missing PA9: pure passive receiver']
+};
+
+const LV_CLASS = {
+  '硬要求':'lv-h','Hard Requirement':'lv-h',
+  '硬不变量':'lv-i','Hard Invariant':'lv-i',
+  '禁止项':'lv-b','Prohibited':'lv-b',
+  '判准':'lv-c','Criterion':'lv-c',
+  '工程增强':'lv-e','Engineering':'lv-e',
+  '设计原则':'lv-s','声明性约束':'lv-s'
+};
+
+/* ─── SVG connection lines ─── */
+const SVG = document.getElementById('conn-svg');
+let activeId=null, redrawRaf=null;
+function scheduleRedraw(){if(redrawRaf) cancelAnimationFrame(redrawRaf);redrawRaf=requestAnimationFrame(redrawLines);}
+
+function redrawLines(){
+  redrawRaf=null; SVG.innerHTML='';
+  const vh=window.innerHeight;
+  const cs=activeId?connectedSet(activeId):null;
+  function getEl(id){return document.querySelector(`[data-id="${id}"]`);}
+  function drawEdge(fid,tid,base,hi){
+    const fe=getEl(fid),te=getEl(tid);
+    if(!fe||!te) return;
+    const fr=fe.getBoundingClientRect(),tr=te.getBoundingClientRect();
+    if(fr.bottom<TOPBAR_H||fr.top>vh) return;
+    if(tr.bottom<TOPBAR_H||tr.top>vh) return;
+    const x1=fr.right,y1=fr.top+fr.height/2,x2=tr.left,y2=tr.top+tr.height/2;
+    const cx=(x1+x2)/2;
+    const isLit=cs&&cs.has(fid)&&cs.has(tid);
+    const color=cs?(isLit?hi:'rgba(255,255,255,.03)'):base;
+    const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d',`M ${x1} ${y1} C ${cx} ${y1} ${cx} ${y2} ${x2} ${y2}`);
+    p.setAttribute('fill','none');p.setAttribute('stroke',color);
+    p.setAttribute('stroke-width',isLit?'2.5':'1.2');SVG.appendChild(p);
+  }
+  (TPAG_DATA.edgesT2PA||[]).forEach(e=>drawEdge(e.from,e.to,'rgba(74,158,221,.18)','rgba(74,158,221,.75)'));
+  (TPAG_DATA.edgesPA2G||[]).forEach(e=>drawEdge(e.from,e.to,'rgba(155,110,217,.18)','rgba(155,110,217,.75)'));
+}
+
+function connectedSet(id){
+  const s=new Set([id]);
+  const nm={};
+  ['T','PA','G'].forEach(l=>(TPAG_DATA.nodes[l]||[]).forEach(n=>nm[n.id]=l));
+  const layer=nm[id];
+  if(layer==='T'){(T2PA_MAP[id]||[]).forEach(pa=>{s.add(pa);(PA2G_MAP[pa]||[]).forEach(g=>s.add(g));});}
+  else if(layer==='PA'){(PA2T_MAP[id]||[]).forEach(t=>s.add(t));(PA2G_MAP[id]||[]).forEach(g=>s.add(g));}
+  else if(layer==='G'){(G2PA_MAP[id]||[]).forEach(pa=>{s.add(pa);(PA2T_MAP[pa]||[]).forEach(t=>s.add(t));});}
+  return s;
+}
+
+function highlightNode(id){
+  activeId=id;
+  const cs=id?connectedSet(id):null;
+  document.querySelectorAll('.node-card').forEach(el=>{
+    const eid=el.getAttribute('data-id');
+    if(!cs){el.classList.remove('dimmed','lit');return;}
+    if(cs.has(eid)){el.classList.remove('dimmed');el.classList.add('lit');}
+    else{el.classList.add('dimmed');el.classList.remove('lit');}
+  });
+  scheduleRedraw();
+}
+function resetHighlight(){activeId=null;document.querySelectorAll('.node-card').forEach(el=>el.classList.remove('dimmed','lit'));scheduleRedraw();}
+
+/* ─── Modal ─── */
+const ov=document.getElementById('ov');
+const mBadge=document.getElementById('m-badge'),mTitle=document.getElementById('m-title'),mBody=document.getElementById('m-body');
+const COL_MAP={T:'#4a9edd',PA:'#9b6ed9',G:'#48aa76'};
+const COL_TXT={T:'#010c18',PA:'#04011a',G:'#01100a'};
+
+function openModal(opts){
+  mBadge.textContent=opts.badge||'';mBadge.style.background=opts.bc||'#444';mBadge.style.color=opts.btc||'#fff';
+  mTitle.textContent=opts.title||'';mBody.innerHTML='';
+  function sec(lbl,content,cls){
+    const d=document.createElement('div');
+    const l=document.createElement('div');l.className='mlbl';l.textContent=lbl;d.appendChild(l);
+    const b=document.createElement('div');b.className=cls||'mtext';b.textContent=content;d.appendChild(b);
+    mBody.appendChild(d);
+  }
+  function div(){const d=document.createElement('div');d.className='mdiv';mBody.appendChild(d);}
+  if(opts.desc){sec('Definition / Description',opts.desc);}
+  if(opts.detail){div();sec('Detail',opts.detail);}
+  if(opts.math){div();sec('Mathematical Expression',opts.math,'mmono');}
+  if(opts.violation){div();sec('⚠ Violation Case',opts.violation,'mviol');}
+  if(opts.analogies&&opts.analogies.length){
+    div();
+    const l=document.createElement('div');l.className='mlbl';l.textContent='Cross-Domain Analogies';mBody.appendChild(l);
+    const g=document.createElement('div');g.className='mana';
+    opts.analogies.forEach(a=>{
+      const dm=document.createElement('div');dm.className='mdom';dm.textContent=a.domain;
+      const tx=document.createElement('div');tx.textContent=a.text;
+      g.appendChild(dm);g.appendChild(tx);
+    });
+    mBody.appendChild(g);
+  }
+  ov.classList.add('open');
+}
+document.getElementById('m-cls').onclick=()=>ov.classList.remove('open');
+ov.onclick=e=>{if(e.target===ov)ov.classList.remove('open');};
+
+/* ─── Render T ─── */
+function renderT(){
+  const cont=document.getElementById('t-nodes');
+  (TPAG_DATA.nodes.T||[]).forEach(n=>{
+    const en=T_EN[n.id]||{};
+    const enName=typeof EN_NAMES!=='undefined'?EN_NAMES[n.id]:n.id;
+    const zhName=n.label.replace(/^T\d+ /,'');
+    const card=document.createElement('div');
+    card.className='node-card t-card';card.setAttribute('data-id',n.id);
+    card.innerHTML=`
+      <div class="nid-row">
+        <span class="nid nid-T">${n.id}</span>
+        <span class="ntitle-en">${enName}</span>
+      </div>
+      <span class="ntitle-zh">${zhName}</span>
+      <div class="node-def">${en.def||n.short}</div>
+      <ul class="reqs">${(en.reqs||[]).map(r=>`<li>${r}</li>`).join('')}</ul>
+      <div class="viol">${en.viol||''}</div>
+    `;
+    const btn=document.createElement('button');btn.className='dbtn';btn.textContent='▷ Violation Case · Analogies';
+    btn.addEventListener('click',e=>{e.stopPropagation();openModal({badge:n.id,bc:COL_MAP.T,btc:COL_TXT.T,title:enName+' · '+zhName,desc:n.desc||n.short,violation:n.violation||'',analogies:n.analogies||[]});});
+    card.appendChild(btn);
+    card.addEventListener('mouseenter',()=>{if(!ov.classList.contains('open'))highlightNode(n.id);});
+    card.addEventListener('mouseleave',()=>{if(!ov.classList.contains('open'))resetHighlight();});
+    card.addEventListener('click',()=>highlightNode(n.id));
+    cont.appendChild(card);
+  });
+}
+
+/* ─── Render PA ─── */
+function renderPA(){
+  const cont=document.getElementById('pa-nodes');
+  const paMap={};(TPAG_DATA.nodes.PA||[]).forEach(n=>paMap[n.id]=n);
+  PA_GROUPS.forEach(grp=>{
+    const lbl=document.createElement('div');lbl.className='pg-label';lbl.textContent=grp.label;cont.appendChild(lbl);
+    grp.ids.forEach(pid=>{
+      const n=paMap[pid];if(!n) return;
+      const enName=typeof EN_NAMES!=='undefined'?EN_NAMES[n.id]:n.id;
+      const zhName=n.label.replace(/^PA\d+ /,'');
+      const card=document.createElement('div');card.className='node-card pa-card';card.setAttribute('data-id',n.id);
+      const tServes=(PA2T_MAP[n.id]||[]).map(t=>`<span class="sc">${t}</span>`).join('');
+      card.innerHTML=`
+        <div class="nid-row">
+          <span class="nid nid-PA">${n.id}</span>
+          <span class="ntitle-en">${enName}</span>
+        </div>
+        <span class="ntitle-zh">${zhName}</span>
+        <div class="serves">${tServes}</div>
+        <div class="node-def">${n.short}</div>
+        <ul class="reqs">${(PA_KEYS_EN[n.id]||[]).map(r=>`<li>${r}</li>`).join('')}</ul>
+      `;
+      const btn=document.createElement('button');btn.className='dbtn';btn.textContent='▷ Math · Case · Analogies';
+      btn.addEventListener('click',e=>{e.stopPropagation();openModal({badge:n.id,bc:COL_MAP.PA,btc:COL_TXT.PA,title:enName+' · '+zhName,desc:n.desc||n.short,math:n.math||'',violation:n.violation||'',analogies:n.analogies||[]});});
+      card.appendChild(btn);
+      card.addEventListener('mouseenter',()=>{if(!ov.classList.contains('open'))highlightNode(n.id);});
+      card.addEventListener('mouseleave',()=>{if(!ov.classList.contains('open'))resetHighlight();});
+      card.addEventListener('click',()=>highlightNode(n.id));
+      cont.appendChild(card);
+    });
+  });
+
+  // Pairs
+  const pEl=document.getElementById('pa-pairs');
+  const PAIR_EN=[
+    {pa1:'PA2',pa2:'PA3',name:'Resource Stability Pair',tagline:'PA2 prevents overflow ↔ PA3 prevents depletion',detail:'Together they ensure resources stay in the healthy interval [R_min, B_R].\n\nPA2 alone is insufficient: an upper bound that keeps declining will still halt the system.\nPA3 alone is insufficient: recovery without an upper bound will eventually explode.'},
+    {pa1:'PA6',pa2:'PA7',name:'Effect Lifecycle Pair',tagline:'PA6 prevents indefinite pending ↔ PA7 prevents lost delivery',detail:'PA6 prevents effects from hanging forever (notifications, obligations never reach terminal state).\nPA7 prevents information from never arriving (authorized receivers never get the message).\nTogether they ensure the complete "emit → receive → resolve" loop.'},
+    {pa1:'PA7',pa2:'PA9',name:'Bidirectional Coupling Pair',tagline:'PA7 = observation side ↔ PA9 = action side',detail:'PA7 guarantees the agent can observe the environment (info reaches agent).\nPA9 guarantees the agent can act on the environment (action produces net effect).\nMissing PA7: blind executor. Missing PA9: pure passive receiver.\nT5 = PA7 ∧ PA9 — both required for true bidirectional coupling.'},
+    {pa1:'PA4',pa2:'PA8',name:'Liveness Pair',tagline:'PA4 = has scheduling chance ↔ PA8 = chance is meaningful',detail:'PA4 guarantees "system always gets another chance to evolve" (existential).\nPA8 guarantees "evolution produces semantic progress" (qualitative).\n\nMissing PA4: agent silenced, never woken up again.\nMissing PA8: agent awakened repeatedly, but every time it idles — zero net progress.'}
+  ];
+  PAIR_EN.forEach(pair=>{
+    const card=document.createElement('div');card.className='pair-card';
+    card.innerHTML=`
+      <div class="pair-top"><div class="pair-ids"><span class="nid nid-PA">${pair.pa1}</span><span class="pair-arrow">↔</span><span class="nid nid-PA">${pair.pa2}</span></div></div>
+      <div class="pair-name">${pair.name}</div>
+      <div class="pair-tagline">${pair.tagline}</div>
+    `;
+    card.addEventListener('click',()=>openModal({badge:pair.pa1+'↔'+pair.pa2,bc:COL_MAP.PA,btc:COL_TXT.PA,title:pair.name,desc:pair.tagline,detail:pair.detail}));
+    pEl.appendChild(card);
+  });
+}
+
+/* ─── Render G ─── */
+const LV_EN_MAP={'硬要求':'Hard Req','硬不变量':'Hard Inv','禁止项':'Prohibited','判准':'Criterion','工程增强':'Engineering','设计原则':'Principle','声明性约束':'Declaration'};
+
+function buildSR(sr){
+  const div=document.createElement('div');div.className='sr';
+  const r1=document.createElement('div');r1.className='sr-r1';
+  const idS=document.createElement('span');idS.className='sr-id';idS.textContent=sr.id;
+  const lvEn=LV_EN_MAP[sr.level]||sr.level;
+  const lv=document.createElement('span');lv.className='lv '+(LV_CLASS[sr.level]||'lv-s');lv.textContent=lvEn;
+  const tt=document.createElement('span');tt.className='sr-title';tt.textContent=sr.title;
+  r1.appendChild(idS);r1.appendChild(lv);r1.appendChild(tt);div.appendChild(r1);
+  if(sr.desc){const d=document.createElement('div');d.className='sr-desc';d.textContent=sr.desc.length>90?sr.desc.slice(0,88)+'…':sr.desc;div.appendChild(d);}
+  return div;
+}
+
+function renderG(){
+  const grid=document.getElementById('g-nodes');
+  (TPAG_DATA.nodes.G||[]).forEach(n=>{
+    const enName=typeof EN_NAMES!=='undefined'?EN_NAMES[n.id]:n.id;
+    const zhName=n.label.replace(/^G\d+ /,'');
+    const card=document.createElement('div');card.className='node-card g-card';card.setAttribute('data-id',n.id);
+    const head=document.createElement('div');head.className='nid-row';
+    const badge=document.createElement('span');badge.className='nid nid-G';badge.textContent=n.id;
+    const title=document.createElement('span');title.className='ntitle-en';title.textContent=enName;
+    head.appendChild(badge);head.appendChild(title);card.appendChild(head);
+    const zhS=document.createElement('span');zhS.className='ntitle-zh';zhS.textContent=zhName;card.appendChild(zhS);
+    const meta=document.createElement('div');meta.className='g-meta';
+    (n.paRoots||[]).forEach(p=>{const c=document.createElement('span');c.className='gpc';c.textContent=p;meta.appendChild(c);});
+    (n.tTargets||[]).forEach(t=>{const c=document.createElement('span');c.className='gtc';c.textContent='→'+t;meta.appendChild(c);});
+    card.appendChild(meta);
+    if(n.desc){const def=document.createElement('div');def.className='node-def';def.textContent=n.desc.split('\n')[0].replace(/。.*/,'。');card.appendChild(def);}
+    const srs=n.subReqs||[];
+    if(srs.length){
+      const srsEl=document.createElement('div');srsEl.className='srs';
+      const SHOW=4;
+      srs.slice(0,SHOW).forEach(sr=>srsEl.appendChild(buildSR(sr)));
+      const hidden=srs.slice(SHOW);
+      if(hidden.length){
+        const hw=document.createElement('div');hw.style.display='none';hw.style.flexDirection='column';hw.style.gap='5px';
+        hidden.forEach(sr=>hw.appendChild(buildSR(sr)));
+        const mb=document.createElement('button');mb.className='more-btn';
+        mb.textContent=`▾ Show ${hidden.length} more requirements`;
+        let open=false;
+        mb.addEventListener('click',e=>{e.stopPropagation();open=!open;hw.style.display=open?'flex':'none';mb.textContent=open?'▴ Collapse':`▾ Show ${hidden.length} more requirements`;scheduleRedraw();});
+        srsEl.appendChild(hw);srsEl.appendChild(mb);
+      }
+      card.appendChild(srsEl);
+    }
+    card.addEventListener('mouseenter',()=>{if(!ov.classList.contains('open'))highlightNode(n.id);});
+    card.addEventListener('mouseleave',()=>{if(!ov.classList.contains('open'))resetHighlight();});
+    card.addEventListener('click',()=>{highlightNode(n.id);openModal({badge:n.id,bc:COL_MAP.G,btc:COL_TXT.G,title:enName+' · '+zhName,desc:n.desc||n.short||''});});
+    grid.appendChild(card);
+  });
+}
+
+/* ─── Init ─── */
+['col-T','col-PA','col-G'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('scroll',scheduleRedraw,{passive:true});});
+window.addEventListener('resize',scheduleRedraw);
+renderT();renderPA();renderG();
+requestAnimationFrame(()=>requestAnimationFrame(redrawLines));
+</script>
+</body>
+</html>

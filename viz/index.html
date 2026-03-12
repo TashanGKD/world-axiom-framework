@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>T-PA-G · 三层体系关系图谱</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════════════════════════════
+   CSS 变量
+═══════════════════════════════════════════════════ */
+:root{
+  --h:50px;
+  --T:#4a9edd;  --T2:#8ccaf0; --Tbg:#030e1c; --Tbg2:#051829; --Tbdr:rgba(74,158,221,.2);
+  --PA:#9b6ed9; --PA2:#caa8f5;--PAbg:#08041d;--PAbg2:#0e072a;--PAbdr:rgba(155,110,217,.2);
+  --G:#48aa76;  --G2:#7ecfa0; --Gbg:#021510; --Gbg2:#04201a; --Gbdr:rgba(72,170,118,.2);
+  --txt:#dedad6; --mut:#7e7c82; --mut2:#4a484e;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;font-family:'Noto Sans SC',sans-serif;color:var(--txt);}
+body{background:#020208;}
+
+/* ═══════════════════════════════════════════════════
+   顶部导航
+═══════════════════════════════════════════════════ */
+.bar{
+  position:fixed;top:0;left:0;right:0;height:var(--h);z-index:200;
+  background:rgba(2,2,8,.9);backdrop-filter:blur(14px);
+  border-bottom:1px solid rgba(255,255,255,.06);
+  display:flex;align-items:center;padding:0 18px;gap:10px;
+}
+.bar-title{font-size:.88rem;font-weight:700;}
+.bar-tag{font-size:.66rem;color:var(--mut);padding:2px 7px;border-radius:8px;background:rgba(255,255,255,.05);}
+.bar-hint{margin-left:auto;font-size:.7rem;color:var(--mut2);}
+
+/* ═══════════════════════════════════════════════════
+   SVG 连线层（fixed，覆盖三列区域）
+═══════════════════════════════════════════════════ */
+#conn-svg{
+  position:fixed;
+  top:var(--h);left:0;
+  width:100%;height:calc(100% - var(--h));
+  pointer-events:none;z-index:10;
+}
+
+/* ═══════════════════════════════════════════════════
+   三列主容器
+═══════════════════════════════════════════════════ */
+.diagram{
+  position:fixed;
+  top:var(--h);left:0;right:0;bottom:0;
+  display:flex;
+}
+.col{
+  overflow-y:auto;overflow-x:hidden;
+  position:relative;padding:16px 12px 24px;
+  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent;
+}
+.col::-webkit-scrollbar{width:3px;}
+.col::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
+
+.col-T {
+  flex:0 0 22%;min-width:190px;
+  background:linear-gradient(168deg,var(--Tbg) 0%,var(--Tbg2) 100%);
+  border-right:1px solid rgba(74,158,221,.12);
+}
+.col-PA{
+  flex:0 0 30%;min-width:240px;
+  background:linear-gradient(168deg,var(--PAbg) 0%,var(--PAbg2) 100%);
+  border-right:1px solid rgba(155,110,217,.12);
+}
+.col-G{
+  flex:1;min-width:320px;
+  background:linear-gradient(168deg,var(--Gbg) 0%,var(--Gbg2) 100%);
+}
+
+/* 水印 */
+.wm{
+  position:absolute;bottom:10px;right:-5px;
+  font-size:clamp(90px,14vw,160px);font-weight:900;
+  pointer-events:none;user-select:none;line-height:1;letter-spacing:-.06em;
+  opacity:.04;
+}
+.col-T  .wm{color:var(--T);}
+.col-PA .wm{color:var(--PA);}
+.col-G  .wm{color:var(--G);}
+
+/* 列标题 */
+.col-head{
+  margin-bottom:14px;padding-bottom:11px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+}
+.col-badge{
+  display:inline-block;font-size:.6rem;font-weight:700;letter-spacing:.08em;
+  padding:2px 8px;border-radius:3px;margin-bottom:5px;
+}
+.cb-T {background:var(--T); color:#010c18;}
+.cb-PA{background:var(--PA);color:#04011a;}
+.cb-G {background:var(--G); color:#01100a;}
+.col-name{display:block;font-size:.95rem;font-weight:700;margin-bottom:3px;}
+.col-T  .col-name{color:var(--T2);}
+.col-PA .col-name{color:var(--PA2);}
+.col-G  .col-name{color:var(--G2);}
+.col-desc{font-size:.7rem;color:var(--mut);line-height:1.55;}
+
+/* ═══════════════════════════════════════════════════
+   节点卡片（通用）
+═══════════════════════════════════════════════════ */
+.node-card{
+  border-radius:8px;padding:12px 13px;margin-bottom:9px;
+  display:flex;flex-direction:column;gap:7px;
+  cursor:pointer;position:relative;
+  transition:border-color .15s,background .15s,opacity .2s;
+}
+.node-card.dimmed{opacity:.2!important;pointer-events:none;}
+.nid-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.nid{font-size:.67rem;font-weight:700;padding:2px 8px;border-radius:3px;letter-spacing:.03em;flex-shrink:0;}
+.nid-T {background:var(--T); color:#010c18;}
+.nid-PA{background:var(--PA);color:#04011a;}
+.nid-G {background:var(--G); color:#01100a;}
+.ntitle{font-size:.86rem;font-weight:700;}
+.col-T  .ntitle{color:var(--T2);}
+.col-PA .ntitle{color:var(--PA2);}
+.col-G  .ntitle{color:var(--G2);}
+
+/* T 卡片 */
+.t-card{background:rgba(74,158,221,.05);border:1px solid var(--Tbdr);}
+.t-card:hover,.t-card.lit{background:rgba(74,158,221,.12)!important;border-color:var(--T)!important;}
+
+/* PA 卡片 */
+.pa-card{background:rgba(155,110,217,.05);border:1px solid var(--PAbdr);}
+.pa-card:hover,.pa-card.lit{background:rgba(155,110,217,.12)!important;border-color:var(--PA)!important;}
+
+/* G 卡片 */
+.g-card{background:rgba(72,170,118,.05);border:1px solid var(--Gbdr);}
+.g-card:hover,.g-card.lit{background:rgba(72,170,118,.12)!important;border-color:var(--G)!important;}
+
+/* 节点内容 */
+.node-def{font-size:.76rem;color:var(--txt);line-height:1.6;}
+
+.reqs{list-style:none;display:flex;flex-direction:column;gap:3px;}
+.reqs li{font-size:.7rem;color:rgba(222,218,214,.7);padding-left:11px;position:relative;line-height:1.45;}
+.reqs li::before{content:'·';position:absolute;left:1px;}
+.col-T  .reqs li::before{color:var(--T);}
+.col-PA .reqs li::before{color:var(--PA);}
+
+.viol{font-size:.69rem;padding:4px 8px;border-radius:4px;
+  background:rgba(200,110,74,.07);border-left:2px solid rgba(200,110,74,.35);
+  color:rgba(200,155,120,.8);line-height:1.4;}
+
+/* T-服务 chip（PA 卡片用） */
+.serves{display:flex;gap:3px;flex-wrap:wrap;}
+.sc{font-size:.58rem;font-weight:700;padding:1px 5px;border-radius:2px;background:rgba(74,158,221,.22);color:var(--T2);}
+.sc.sub{background:rgba(74,158,221,.1);color:rgba(140,202,240,.55);}
+
+/* 详情按钮 */
+.dbtn{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:.65rem;color:var(--mut);background:none;
+  border:1px solid rgba(255,255,255,.09);border-radius:3px;
+  padding:3px 8px;transition:.15s;align-self:flex-start;
+  cursor:pointer;
+}
+.dbtn:hover{border-color:var(--mut);color:var(--txt);}
+
+/* ═══════════════════════════════════════════════════
+   PA 分组标签
+═══════════════════════════════════════════════════ */
+.pg-label{
+  font-size:.58rem;font-weight:700;letter-spacing:.08em;
+  color:rgba(155,110,217,.65);
+  padding:2px 8px;border-left:2px solid rgba(155,110,217,.3);
+  margin-bottom:6px;margin-top:14px;
+}
+.pg-label:first-child{margin-top:0;}
+
+/* 互补对 */
+.pairs-wrap{
+  border-top:1px solid rgba(155,110,217,.15);
+  margin-top:16px;padding-top:14px;
+}
+.pairs-title{font-size:.6rem;font-weight:700;letter-spacing:.07em;color:rgba(155,110,217,.6);margin-bottom:10px;}
+.pair-card{
+  background:rgba(155,110,217,.05);border:1px solid rgba(155,110,217,.15);
+  border-radius:6px;padding:9px 11px;margin-bottom:8px;cursor:pointer;
+  transition:border-color .15s,background .15s;
+}
+.pair-card:hover{border-color:var(--PA);background:rgba(155,110,217,.12);}
+.pair-top{display:flex;align-items:center;gap:5px;margin-bottom:4px;}
+.pair-ids{display:flex;align-items:center;gap:3px;font-size:.65rem;font-weight:700;}
+.pair-arrow{color:var(--PA);font-size:.85rem;}
+.pair-name{font-size:.72rem;font-weight:700;color:var(--PA2);}
+.pair-tagline{font-size:.67rem;color:var(--mut);line-height:1.4;}
+
+/* ═══════════════════════════════════════════════════
+   G 列布局（2 列网格）
+═══════════════════════════════════════════════════ */
+.g-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;align-items:start;}
+@media(max-width:1100px){.g-grid{grid-template-columns:1fr;}}
+
+.g-meta{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:2px;}
+.gpc{font-size:.59rem;font-weight:600;padding:1px 5px;border-radius:2px;background:rgba(155,110,217,.18);color:var(--PA2);border:1px solid rgba(155,110,217,.2);}
+.gtc{font-size:.57rem;padding:1px 4px;border-radius:2px;background:rgba(74,158,221,.12);color:rgba(140,202,240,.6);}
+
+/* G 子要求 */
+.srs{display:flex;flex-direction:column;gap:5px;}
+.sr{padding:6px 9px;border-radius:5px;background:rgba(72,170,118,.04);border:1px solid rgba(72,170,118,.1);}
+.sr-r1{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:3px;}
+.sr-id{font-family:'JetBrains Mono',monospace;font-size:.59rem;font-weight:600;color:var(--G);white-space:nowrap;}
+.lv{font-size:.55rem;padding:1px 4px;border-radius:2px;white-space:nowrap;}
+.lv-h{background:rgba(200,114,74,.2);color:#e89070;}
+.lv-i{background:rgba(212,144,74,.2);color:#e8b070;}
+.lv-b{background:rgba(200,74,74,.2); color:#e88080;}
+.lv-c{background:rgba(90,138,171,.2);color:#90c0e0;}
+.lv-e{background:rgba(90,138,171,.15);color:#80afd0;}
+.lv-s{background:rgba(72,170,118,.2);color:var(--G2);}
+.sr-title{font-size:.73rem;font-weight:600;color:var(--txt);}
+.sr-desc{font-size:.68rem;color:var(--mut);line-height:1.5;}
+
+.more-btn{
+  font-size:.67rem;color:var(--mut);background:none;
+  border:1px dashed rgba(72,170,118,.2);border-radius:4px;
+  padding:4px 10px;width:100%;cursor:pointer;transition:.15s;
+}
+.more-btn:hover{border-color:var(--G);color:var(--G);}
+
+/* ═══════════════════════════════════════════════════
+   弹窗
+═══════════════════════════════════════════════════ */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(6px);z-index:400;display:none;align-items:center;justify-content:center;padding:16px;}
+.ov.open{display:flex;}
+.modal{background:#0f0f18;border:1px solid rgba(255,255,255,.1);border-radius:12px;width:560px;max-width:96vw;max-height:84vh;overflow:hidden;display:flex;flex-direction:column;}
+.mhd{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.mbadge{font-size:.67rem;font-weight:700;padding:3px 8px;border-radius:3px;}
+.mtitle{font-size:.95rem;font-weight:700;}
+.mbody{padding:16px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
+.mlbl{font-size:.62rem;font-weight:700;letter-spacing:.08em;color:var(--mut);text-transform:uppercase;margin-bottom:3px;}
+.mtext{font-size:.82rem;line-height:1.7;white-space:pre-wrap;}
+.mmono{font-family:'JetBrains Mono',monospace;font-size:.75rem;line-height:1.65;background:#07070e;border-radius:5px;padding:10px;border:1px solid rgba(255,255,255,.07);white-space:pre-wrap;overflow-x:auto;}
+.mviol{background:rgba(200,90,70,.07);border-left:3px solid rgba(200,90,70,.45);border-radius:0 5px 5px 0;padding:10px 13px;font-size:.8rem;line-height:1.7;white-space:pre-wrap;}
+.mana{display:grid;grid-template-columns:72px 1fr;gap:4px 10px;font-size:.8rem;}
+.mdom{color:var(--mut);font-weight:500;align-self:start;padding-top:2px;}
+.mdiv{height:1px;background:rgba(255,255,255,.06);}
+.mft{padding:10px 18px;border-top:1px solid rgba(255,255,255,.07);display:flex;justify-content:flex-end;}
+.mcls{padding:5px 16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--txt);border-radius:5px;cursor:pointer;transition:.15s;}
+.mcls:hover{background:rgba(255,255,255,.14);}
+
+/* ═══════════════════════════════════════════════════
+   响应式 < 900px: 竖向滚动
+═══════════════════════════════════════════════════ */
+@media(max-width:900px){
+  html,body{overflow:auto;}
+  #conn-svg{display:none;}
+  .diagram{position:static;flex-direction:column;}
+  .col{min-height:300px;overflow:visible;}
+  .col-T,.col-PA{border-right:none;border-bottom:1px solid rgba(255,255,255,.07);}
+}
+</style>
+</head>
+<body>
+
+<!-- 顶栏 -->
+<header class="bar">
+  <span class="bar-title">T-PA-G · 三层目标—公理—要求体系 v2.2</span>
+  <span class="bar-tag">关系图谱</span>
+  <span class="bar-hint">悬停节点高亮连线 · 点击查看详情</span>
+  <a href="viz-graph.html" style="margin-left:8px;font-size:.7rem;padding:4px 10px;border:1px solid rgba(155,110,217,.4);border-radius:5px;color:#c4a8f5;text-decoration:none;background:rgba(155,110,217,.08);" title="全节点有向图谱（无需滚动）">⬡ 图谱视图</a>
+  <a href="viz-en.html" style="font-size:.7rem;padding:4px 10px;border:1px solid rgba(74,158,221,.4);border-radius:5px;color:#8ccaf0;text-decoration:none;background:rgba(74,158,221,.08);" title="English Version">EN</a>
+</header>
+
+<!-- SVG 连线 -->
+<svg id="conn-svg"></svg>
+
+<!-- 三列 -->
+<div class="diagram" id="diagram">
+
+  <!-- ══ T 列 ══ -->
+  <div class="col col-T" id="col-T">
+    <div class="wm">T</div>
+    <div class="col-head">
+      <span class="col-badge cb-T">T 层 · 5个</span>
+      <span class="col-name">本质目标层</span>
+      <span class="col-desc">对任何"智能体—世界"多主体系统普遍成立，与具体实现无关。违反 T 不是"跑得不好"，而是"不再是那类系统"。串行依赖：T1→T2→T3→T4，T5 并行贯穿。</span>
+    </div>
+    <div id="t-nodes"></div>
+  </div>
+
+  <!-- ══ PA 列 ══ -->
+  <div class="col col-PA" id="col-PA">
+    <div class="wm">PA</div>
+    <div class="col-head">
+      <span class="col-badge cb-PA">PA 层 · 9条</span>
+      <span class="col-name">抽象公理层</span>
+      <span class="col-desc">T 与 G 的结构性桥梁。比 T 更具体（有结构含义），比 G 更抽象（与实现无关）。每条 PA 可以证明：若不满足，则 T 层某目标必然失效。</span>
+    </div>
+    <div id="pa-nodes"></div>
+    <div class="pairs-wrap">
+      <div class="pairs-title">⇄ 四对互补关系（缺任意一侧，另一侧单独不够）</div>
+      <div id="pa-pairs"></div>
+    </div>
+  </div>
+
+  <!-- ══ G 列 ══ -->
+  <div class="col col-G" id="col-G">
+    <div class="wm">G</div>
+    <div class="col-head">
+      <span class="col-badge cb-G">G 层 · G0–G8 + 子要求</span>
+      <span class="col-name">当前系统目标层</span>
+      <span class="col-desc">PA 在粒子体系（world/agents/meta）中的具体化，与架构绑定。每条 G 要求均可追溯到 PA 公理和 T 目标。串行核心链：G0→G1→G2→G3→G4；G5/G6 并行；G7 LLM 特化；G8 工程增强。</span>
+    </div>
+    <div class="g-grid" id="g-nodes"></div>
+  </div>
+
+</div>
+
+<!-- 弹窗 -->
+<div class="ov" id="ov">
+  <div class="modal">
+    <div class="mhd">
+      <span id="m-badge" class="mbadge"></span>
+      <span id="m-title" class="mtitle"></span>
+    </div>
+    <div id="m-body" class="mbody"></div>
+    <div class="mft"><button class="mcls" id="m-cls">关 闭</button></div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+/* ══════════════════════════════════════════════════
+   静态配置
+══════════════════════════════════════════════════ */
+const TOPBAR_H = 50;
+
+const PA_GROUPS = [
+  { label: '定义组（服务 T1 为主）', ids: ['PA1','PA5'] },
+  { label: '边界组（服务 T2/T3）',    ids: ['PA2','PA6'] },
+  { label: '生存组（服务 T3 为主）',  ids: ['PA3','PA4'] },
+  { label: '进展组（独立对应 T4）',   ids: ['PA8'] },
+  { label: '耦合组（服务 T5 为主）',  ids: ['PA7','PA9'] }
+];
+
+const T_MIN = {
+  T1:['可区分的主体与环境','可描述的状态与演化','可描述的相互作用路径'],
+  T2:['状态值域合法（energy∈[0,100] 等）','写边界合法：结果/主体/影响范围三维约束','真源唯一（PA5）+ 接口完备'],
+  T3:['资源不会只耗不补（PA3 可恢复）','累积不会只增不减（PA2 有界）','调度不会中断（PA4 再进入）','演化函数无死状态（PA1 全函数）'],
+  T4:['不存在非预期吸收态','不陷入无意义固定点或短周期循环','存在逃离病态轨道的机制（PA8）'],
+  T5:['合法事件最终能影响相应主体（PA7，观察侧）','合法动作最终能改变相应世界（PA9，行动侧）','两者缺一不构成真实耦合']
+};
+const T_VIOL = {
+  T1:'若违反 → 根本得不到一个系统',
+  T2:'若违反 → 系统进入非法状态，后续演化结果不可信',
+  T3:'若违反 → 永久沉默、资源耗尽停机或内部积压溢出',
+  T4:'若违反 → 假活性、假稳态、形式运行但语义已冻结',
+  T5:'若违反 → 名义多主体，实为孤立自循环状态机的集合'
+};
+
+const PA_KEYS = {
+  PA1:['状态空间良定义，S=S_agent⊕S_world⊕S_interaction','演化算子对任意合法状态全定义（无死状态）'],
+  PA2:['覆盖所有可能无界增长量：energy/memory/notification_count/obligation_count 等','识别发生在设计阶段，运行时不要求动态判定'],
+  PA3:['PA3 与 PA2 互补：PA2 防上溢，PA3 防下溢','恢复路径必须在实际可达轨迹中存在（不只是理论存在）'],
+  PA4:['时间/事件/内部调度触发，三者满足其一即可','只要求"有机会演化"不被永久失去，不要求每次有语义进展（PA8 的职责）'],
+  PA5:['"durable"=其变更具有因果可追溯性的状态分量（非临时缓存）','其他组件只能通过权威者的 apply 路径间接影响，不能直接修改'],
+  PA6:['覆盖所有 effect 类型：Notification/Request/Task/Obligation/ContextClose','各类型终态不同但必须显式定义（consumed/expired/satisfied/applied 等）'],
+  PA7:['不要求"立刻到达"，但要求"有限时间内必然到达"','hazard/emergency 类信息须突破所有注意力门槛，强制到达'],
+  PA8:['P(s) 的定义来源于系统设计层，非运行时主观认定','用 Prob[escape]>0（非零概率逃离），系统不成为吸收态（Borel-Cantelli）'],
+  PA9:['PA7 保证观察侧（信息到达），PA9 保证行动侧（净效果）','缺 PA7：盲目执行器；缺 PA9：纯被动接收器']
+};
+
+const LV_CLASS = {
+  '硬要求':'lv-h','硬不变量':'lv-i','禁止项':'lv-b',
+  '判准':'lv-c','工程增强':'lv-e','设计原则':'lv-s','声明性约束':'lv-s'
+};
+
+/* ══════════════════════════════════════════════════
+   节点查找表 & 边反向表
+══════════════════════════════════════════════════ */
+const NM = {}; // id → node obj with .layer
+['T','PA','G'].forEach(L => (TPAG_DATA.nodes[L]||[]).forEach(n => NM[n.id]={...n,layer:L}));
+
+const T2PA={}, PA2T={}, PA2G={}, G2PA={};
+(TPAG_DATA.edgesT2PA||[]).forEach(e=>{
+  (T2PA[e.from]=T2PA[e.from]||[]).push(e.to);
+  (PA2T[e.to]=PA2T[e.to]||[]).push(e.from);
+});
+(TPAG_DATA.edgesPA2G||[]).forEach(e=>{
+  (PA2G[e.from]=PA2G[e.from]||[]).push(e.to);
+  (G2PA[e.to]=G2PA[e.to]||[]).push(e.from);
+});
+
+function connectedSet(id) {
+  const s = new Set([id]);
+  const n = NM[id]; if(!n) return s;
+  if(n.layer==='T'){
+    (T2PA[id]||[]).forEach(pa=>{s.add(pa);(PA2G[pa]||[]).forEach(g=>s.add(g));});
+  } else if(n.layer==='PA'){
+    (PA2T[id]||[]).forEach(t=>s.add(t));
+    (PA2G[id]||[]).forEach(g=>s.add(g));
+  } else if(n.layer==='G'){
+    (G2PA[id]||[]).forEach(pa=>{s.add(pa);(PA2T[pa]||[]).forEach(t=>s.add(t));});
+  }
+  return s;
+}
+
+/* ══════════════════════════════════════════════════
+   连线绘制
+══════════════════════════════════════════════════ */
+const SVG = document.getElementById('conn-svg');
+let activeId = null, redrawRaf = null;
+
+function scheduleRedraw(){ if(redrawRaf) cancelAnimationFrame(redrawRaf); redrawRaf=requestAnimationFrame(redrawLines); }
+
+function redrawLines(){
+  redrawRaf = null;
+  SVG.innerHTML='';
+  const vh=window.innerHeight;
+  const cs = activeId ? connectedSet(activeId) : null;
+
+  function getEl(id){ return document.querySelector(`[data-id="${id}"]`); }
+
+  function drawEdge(fid, tid, baseColor, hlColor){
+    const fe=getEl(fid), te=getEl(tid);
+    if(!fe||!te) return;
+    const fr=fe.getBoundingClientRect(), tr=te.getBoundingClientRect();
+    if(fr.bottom<TOPBAR_H||fr.top>vh) return;
+    if(tr.bottom<TOPBAR_H||tr.top>vh) return;
+    const x1=fr.right, y1=fr.top+fr.height/2;
+    const x2=tr.left,  y2=tr.top+tr.height/2;
+    const cx=(x1+x2)/2;
+    const isLit = cs && cs.has(fid) && cs.has(tid);
+    const color = cs ? (isLit ? hlColor : 'rgba(255,255,255,.03)') : baseColor;
+    const w = isLit ? 2.5 : 1.2;
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',`M ${x1} ${y1} C ${cx} ${y1} ${cx} ${y2} ${x2} ${y2}`);
+    path.setAttribute('fill','none');
+    path.setAttribute('stroke',color);
+    path.setAttribute('stroke-width',w);
+    if(isLit) path.setAttribute('stroke-opacity','1');
+    SVG.appendChild(path);
+  }
+
+  (TPAG_DATA.edgesT2PA||[]).forEach(e=>drawEdge(e.from,e.to,'rgba(74,158,221,.18)','rgba(74,158,221,.75)'));
+  (TPAG_DATA.edgesPA2G||[]).forEach(e=>drawEdge(e.from,e.to,'rgba(155,110,217,.18)','rgba(155,110,217,.75)'));
+}
+
+/* ══════════════════════════════════════════════════
+   高亮 / 取消高亮
+══════════════════════════════════════════════════ */
+function highlightNode(id){
+  activeId = id;
+  const cs = id ? connectedSet(id) : null;
+  document.querySelectorAll('.node-card').forEach(el=>{
+    const eid=el.getAttribute('data-id');
+    if(!cs){ el.classList.remove('dimmed','lit'); return; }
+    if(cs.has(eid)){ el.classList.remove('dimmed'); el.classList.add('lit'); }
+    else          { el.classList.add('dimmed'); el.classList.remove('lit'); }
+  });
+  scheduleRedraw();
+}
+function resetHighlight(){ activeId=null; document.querySelectorAll('.node-card').forEach(el=>el.classList.remove('dimmed','lit')); scheduleRedraw(); }
+
+/* ══════════════════════════════════════════════════
+   弹窗
+══════════════════════════════════════════════════ */
+const ov=document.getElementById('ov');
+const mBadge=document.getElementById('m-badge');
+const mTitle=document.getElementById('m-title');
+const mBody=document.getElementById('m-body');
+
+function openModal(opts){
+  mBadge.textContent=opts.badge||''; mBadge.style.background=opts.bc||'#444'; mBadge.style.color=opts.btc||'#fff';
+  mTitle.textContent=opts.title||'';
+  mBody.innerHTML='';
+  function sec(lbl,content,cls){
+    const d=document.createElement('div');
+    const l=document.createElement('div'); l.className='mlbl'; l.textContent=lbl; d.appendChild(l);
+    const b=document.createElement('div'); b.className=cls||'mtext'; b.textContent=content; d.appendChild(b);
+    mBody.appendChild(d);
+  }
+  function div(){ const d=document.createElement('div'); d.className='mdiv'; mBody.appendChild(d); }
+  if(opts.desc){ sec('说明',opts.desc); }
+  if(opts.detail){ div(); sec('详细解析',opts.detail); }
+  if(opts.math){ div(); sec('数学表达',opts.math,'mmono'); }
+  if(opts.violation){ div(); sec('⚠ 违反案例',opts.violation,'mviol'); }
+  if(opts.analogies&&opts.analogies.length){
+    div();
+    const l=document.createElement('div'); l.className='mlbl'; l.textContent='跨域类比'; mBody.appendChild(l);
+    const g=document.createElement('div'); g.className='mana';
+    opts.analogies.forEach(a=>{
+      const dm=document.createElement('div'); dm.className='mdom'; dm.textContent=a.domain;
+      const tx=document.createElement('div'); tx.textContent=a.text;
+      g.appendChild(dm); g.appendChild(tx);
+    });
+    mBody.appendChild(g);
+  }
+  ov.classList.add('open');
+}
+document.getElementById('m-cls').onclick=()=>ov.classList.remove('open');
+ov.onclick=e=>{ if(e.target===ov) ov.classList.remove('open'); };
+
+/* ══════════════════════════════════════════════════
+   渲染 T 节点
+══════════════════════════════════════════════════ */
+function renderT(){
+  const cont=document.getElementById('t-nodes');
+  (TPAG_DATA.nodes.T||[]).forEach(n=>{
+    const card=document.createElement('div');
+    card.className='node-card t-card'; card.setAttribute('data-id',n.id);
+
+    // 节点头
+    const row=document.createElement('div'); row.className='nid-row';
+    const badge=document.createElement('span'); badge.className='nid nid-T'; badge.textContent=n.id;
+    const title=document.createElement('span'); title.className='ntitle';
+    const enT=typeof EN_NAMES!=='undefined'?EN_NAMES[n.id]:'';
+    title.innerHTML=(n.label.replace(/^T\d+ /,''))+(enT?` <span style="font-size:.68em;font-weight:400;opacity:.55;font-style:italic">${enT}</span>`:'');
+    row.appendChild(badge); row.appendChild(title); card.appendChild(row);
+
+    // 定义
+    const def=document.createElement('div'); def.className='node-def'; def.textContent=n.short; card.appendChild(def);
+
+    // 最小要求
+    const ul=document.createElement('ul'); ul.className='reqs';
+    (T_MIN[n.id]||[]).forEach(r=>{ const li=document.createElement('li'); li.textContent=r; ul.appendChild(li); });
+    card.appendChild(ul);
+
+    // 违反后果
+    const viol=document.createElement('div'); viol.className='viol'; viol.textContent=T_VIOL[n.id]||''; card.appendChild(viol);
+
+    // 按钮
+    const btn=document.createElement('button'); btn.className='dbtn'; btn.textContent='▷ 违反案例 · 类比';
+    btn.addEventListener('click',e=>{e.stopPropagation(); openModal({badge:n.id,bc:getComputedStyle(document.documentElement).getPropertyValue('--T').trim(),btc:'#010c18',title:n.label,desc:n.desc||n.short,violation:n.violation||'',analogies:n.analogies||[]});});
+    card.appendChild(btn);
+
+    // 悬停
+    card.addEventListener('mouseenter',()=>{ if(!ov.classList.contains('open')) highlightNode(n.id); });
+    card.addEventListener('mouseleave',()=>{ if(!ov.classList.contains('open')) resetHighlight(); });
+    card.addEventListener('click',()=>highlightNode(n.id));
+
+    cont.appendChild(card);
+  });
+}
+
+/* ══════════════════════════════════════════════════
+   渲染 PA 节点
+══════════════════════════════════════════════════ */
+function renderPA(){
+  const cont=document.getElementById('pa-nodes');
+  const paMap={};
+  (TPAG_DATA.nodes.PA||[]).forEach(n=>paMap[n.id]=n);
+
+  PA_GROUPS.forEach(grp=>{
+    const lbl=document.createElement('div'); lbl.className='pg-label'; lbl.textContent=grp.label; cont.appendChild(lbl);
+
+    grp.ids.forEach(pid=>{
+      const n=paMap[pid]; if(!n) return;
+      const card=document.createElement('div');
+      card.className='node-card pa-card'; card.setAttribute('data-id',n.id);
+
+      // 头
+      const row=document.createElement('div'); row.className='nid-row';
+      const badge=document.createElement('span'); badge.className='nid nid-PA'; badge.textContent=n.id;
+      const title=document.createElement('span'); title.className='ntitle';
+      const enPA=typeof EN_NAMES!=='undefined'?EN_NAMES[n.id]:'';
+      title.innerHTML=(n.label.replace(/^PA\d+ /,''))+(enPA?` <span style="font-size:.66em;font-weight:400;opacity:.5;font-style:italic">${enPA}</span>`:'');
+      row.appendChild(badge); row.appendChild(title); card.appendChild(row);
+
+      // T 服务 chips
+      const mainT=(PA2T[n.id]||[]).filter(t=>(T2PA[t]||[]).includes(n.id));
+      const serves=document.createElement('div'); serves.className='serves';
+      // Simple: just show all connected T nodes
+      (PA2T[n.id]||[]).forEach(t=>{
+        const c=document.createElement('span'); c.className='sc'; c.textContent=t; serves.appendChild(c);
+      });
+      if(serves.children.length) card.appendChild(serves);
+
+      // 定义
+      const def=document.createElement('div'); def.className='node-def'; def.textContent=n.short; card.appendChild(def);
+
+      // 关键约束
+      const ul=document.createElement('ul'); ul.className='reqs';
+      (PA_KEYS[n.id]||[]).forEach(r=>{ const li=document.createElement('li'); li.textContent=r; ul.appendChild(li); });
+      card.appendChild(ul);
+
+      // 按钮
+      const btn=document.createElement('button'); btn.className='dbtn'; btn.textContent='▷ 数学 · 案例 · 类比';
+      btn.addEventListener('click',e=>{e.stopPropagation(); openModal({badge:n.id,bc:'#9b6ed9',btc:'#04011a',title:n.label,desc:n.desc||n.short,math:n.math||'',violation:n.violation||'',analogies:n.analogies||[]});});
+      card.appendChild(btn);
+
+      card.addEventListener('mouseenter',()=>{ if(!ov.classList.contains('open')) highlightNode(n.id); });
+      card.addEventListener('mouseleave',()=>{ if(!ov.classList.contains('open')) resetHighlight(); });
+      card.addEventListener('click',()=>highlightNode(n.id));
+
+      cont.appendChild(card);
+    });
+  });
+
+  // 互补对
+  const pairsEl=document.getElementById('pa-pairs');
+  (TPAG_DATA.pairings||[]).forEach(pair=>{
+    const card=document.createElement('div'); card.className='pair-card';
+    card.innerHTML=`
+      <div class="pair-top">
+        <div class="pair-ids">
+          <span class="nid nid-PA">${pair.pa1}</span>
+          <span class="pair-arrow">↔</span>
+          <span class="nid nid-PA">${pair.pa2}</span>
+        </div>
+      </div>
+      <div class="pair-name">${pair.name}</div>
+      <div class="pair-tagline">${pair.tagline}</div>
+    `;
+    card.addEventListener('click',()=>openModal({badge:pair.pa1+'↔'+pair.pa2,bc:'#9b6ed9',btc:'#04011a',title:pair.name,desc:pair.tagline,detail:pair.detail}));
+    pairsEl.appendChild(card);
+  });
+}
+
+/* ══════════════════════════════════════════════════
+   渲染 G 节点
+══════════════════════════════════════════════════ */
+function renderG(){
+  const grid=document.getElementById('g-nodes');
+  (TPAG_DATA.nodes.G||[]).forEach(n=>{
+    const card=document.createElement('div');
+    card.className='node-card g-card'; card.setAttribute('data-id',n.id);
+
+    // 头
+    const row=document.createElement('div'); row.className='nid-row';
+    const badge=document.createElement('span'); badge.className='nid nid-G'; badge.textContent=n.id;
+    const title=document.createElement('span'); title.className='ntitle';
+    const enG=typeof EN_NAMES!=='undefined'?EN_NAMES[n.id]:'';
+    title.innerHTML=(n.label.replace(/^G\d+ /,''))+(enG?` <span style="font-size:.66em;font-weight:400;opacity:.5;font-style:italic">${enG}</span>`:'');
+    row.appendChild(badge); row.appendChild(title); card.appendChild(row);
+
+    // meta chips
+    const meta=document.createElement('div'); meta.className='g-meta';
+    (n.paRoots||[]).forEach(p=>{ const c=document.createElement('span'); c.className='gpc'; c.textContent=p; meta.appendChild(c); });
+    (n.tTargets||[]).forEach(t=>{ const c=document.createElement('span'); c.className='gtc'; c.textContent='→'+t; meta.appendChild(c); });
+    card.appendChild(meta);
+
+    // 简短说明
+    if(n.desc){
+      const def=document.createElement('div'); def.className='node-def';
+      def.textContent=n.desc.split('\n')[0].replace(/。.*/,'。');
+      card.appendChild(def);
+    }
+
+    // 子要求
+    const srs=n.subReqs||[];
+    if(srs.length){
+      const srsEl=document.createElement('div'); srsEl.className='srs';
+      const SHOW=4;
+      const visible=srs.slice(0,SHOW), hidden=srs.slice(SHOW);
+
+      visible.forEach(sr=>srsEl.appendChild(buildSR(sr)));
+
+      if(hidden.length){
+        const hiddenWrap=document.createElement('div');
+        hiddenWrap.style.display='none';
+        hiddenWrap.style.flexDirection='column';
+        hiddenWrap.style.gap='5px';
+        hidden.forEach(sr=>hiddenWrap.appendChild(buildSR(sr)));
+
+        const mb=document.createElement('button'); mb.className='more-btn';
+        mb.textContent=`▾ 展开剩余 ${hidden.length} 条要求`;
+        let open=false;
+        mb.addEventListener('click',e=>{
+          e.stopPropagation();
+          open=!open;
+          hiddenWrap.style.display=open?'flex':'none';
+          mb.textContent=open?'▴ 收起':`▾ 展开剩余 ${hidden.length} 条要求`;
+          scheduleRedraw();
+        });
+        srsEl.appendChild(hiddenWrap);
+        srsEl.appendChild(mb);
+      }
+      card.appendChild(srsEl);
+    }
+
+    card.addEventListener('mouseenter',()=>{ if(!ov.classList.contains('open')) highlightNode(n.id); });
+    card.addEventListener('mouseleave',()=>{ if(!ov.classList.contains('open')) resetHighlight(); });
+    card.addEventListener('click',()=>{ highlightNode(n.id); openModal({badge:n.id,bc:'#48aa76',btc:'#01100a',title:n.label,desc:n.desc||n.short||''}); });
+
+    grid.appendChild(card);
+  });
+}
+
+function buildSR(sr){
+  const div=document.createElement('div'); div.className='sr';
+  const r1=document.createElement('div'); r1.className='sr-r1';
+  const id=document.createElement('span'); id.className='sr-id'; id.textContent=sr.id;
+  const lv=document.createElement('span'); lv.className='lv '+(LV_CLASS[sr.level]||'lv-s'); lv.textContent=sr.level;
+  const tt=document.createElement('span'); tt.className='sr-title'; tt.textContent=sr.title;
+  r1.appendChild(id); r1.appendChild(lv); r1.appendChild(tt); div.appendChild(r1);
+  if(sr.desc){
+    const d=document.createElement('div'); d.className='sr-desc';
+    // Truncate to ~80 chars for compact display
+    d.textContent=sr.desc.length>90?sr.desc.slice(0,88)+'…':sr.desc;
+    div.appendChild(d);
+  }
+  return div;
+}
+
+/* ══════════════════════════════════════════════════
+   滚动事件 & 初始化
+══════════════════════════════════════════════════ */
+['col-T','col-PA','col-G'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('scroll', scheduleRedraw, {passive:true});
+});
+window.addEventListener('resize', scheduleRedraw);
+
+// 初始渲染
+renderT();
+renderPA();
+renderG();
+// 延迟一帧后绘制连线（等待布局完成）
+requestAnimationFrame(()=>requestAnimationFrame(redrawLines));
+</script>
+</body>
+</html>
