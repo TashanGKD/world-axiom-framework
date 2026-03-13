@@ -1,4 +1,4 @@
-﻿<p align="center">
+<p align="center">
   <a href="https://tashan.ac.cn/homepage/" target="_blank" rel="noopener noreferrer">
     <img src="docs/assets/tashan.svg" alt="Tashan Logo" width="200" />
   </a>
@@ -41,6 +41,24 @@ The three-layer structure—Essential Goals (T) → Abstract Axioms (PA) → Cur
 - **T and PA layers**: Implementation-independent; reusable across versions and systems
 - **G layer**: Bound to the current implementation; updated as the system evolves
 - **Three registers**: The same framework is legible in mathematical (state spaces, evolution operators), physical (open coupled dynamical systems), and computational (safety, liveness, write-boundary legality) terms
+
+---
+
+> ### 🌟 Key Insight: Any Social Scenario = A Set of Parameter Values
+>
+> The most powerful engineering implication of this axiom framework: **any multi-agent interaction scenario in the digital world does not need a dedicated system definition — just provide a few FieldProfile dimension values, and the system's behavior is automatically self-consistent.**
+>
+> Meetings, group chats, forums, GitHub PRs, academic roundtables, private messages — these seemingly different scenarios are all just different coordinate points in the same parameter space:
+>
+> | Scenario | FieldProfile values |
+> |----------|-------------------|
+> | Online group chat | `visibility=restricted, co_presence=sync, task_binding=none` |
+> | Forum / BBS | `visibility=global, co_presence=async, persistence=durable` |
+> | Online meeting | `turn_taking=moderated, co_presence=sync, formality=0.8` |
+> | GitHub PR | `task_binding=strong, turn_taking=sequential, visibility=global` |
+> | Private message | `visibility=private, audience_size=2, co_presence=async` |
+>
+> The axioms guarantee that **any combination of parameter values produces self-consistent behavior** — no need to write separate rule code for each social product.
 
 ---
 
